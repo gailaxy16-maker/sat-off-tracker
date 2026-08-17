@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#2F5233">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="วันหยุดเสาร์">
+<title>ระบบติดตามวันหยุดเสาร์</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Kanit:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F7F8F3; --stripe: #EDF3EA; --ink: #1F2A24;
+    --line: #AEC2B0; --line-soft: #D3DED4; --moss: #2F5233;
+    --moss-light: #4A7856; --moss-pale: #8FA893; --red: #C4482E;
+    --amber: #E08E4F; --muted: #5B6B5E;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'IBM Plex Sans Thai', sans-serif; margin: 0; padding: 14px; background: var(--paper); color: var(--ink); max-width: 480px; margin-left: auto; margin-right: auto; }
+  .display { font-family: 'Kanit', sans-serif; }
+
+  .header { border-radius: 14px; padding: 16px 18px; background: linear-gradient(120deg, #1F2A24, #2A4331 55%, #4A7856); color: #fff; margin-bottom: 10px; }
+  .header-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .header .eyebrow { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #B9D3BC; }
+  .header h1 { margin: 4px 0 0; font-size: 20px; font-weight: 700; }
+
+  .gen-controls { display: flex; align-items: center; gap: 6px; }
+  .gen-controls select { border: 1.5px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); color: #fff; border-radius: 8px; padding: 6px 8px; font-family: 'Kanit', sans-serif; font-size: 12px; }
+  .gen-controls select option { color: #1F2A24; }
+  .btn-generate { border: 1.5px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); color: #fff; border-radius: 8px; padding: 7px 12px; font-family: 'Kanit', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+  .btn-generate[disabled] { opacity: 0.6; cursor: wait; }
+  .btn-generate svg { width: 14px; height: 14px; }
+
+  .notify-banner { display: none; align-items: flex-start; gap: 10px; background: linear-gradient(90deg, #2F5233, #4A7856); color: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(47,82,51,0.25); }
+  .notify-banner svg { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; }
+  .notify-banner .msg { font-size: 13px; line-height: 1.5; flex: 1; }
+  .notify-banner .close-x { cursor: pointer; opacity: 0.8; flex-shrink: 0; }
+  .notify-banner .close-x svg { width: 16px; height: 16px; }
+
+  #toast { display: none; position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; font-size: 13px; padding: 10px 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 50; max-width: 90vw; text-align: center; }
+
+  .cycle-card { background: #fff; border: 2px solid var(--line); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+  .cycle-card.current { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(47,82,51,0.12); }
+  .cycle-head { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .cycle-label { font-weight: 600; font-size: 14px; }
+  .cycle-tag { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss-light); margin-top: 1px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .badge.ok { background: linear-gradient(90deg, #2F5233, #6B8F71); }
+  .badge.full { background: linear-gradient(90deg, #C4482E, #E08E4F); }
+
+  .progress-track { height: 6px; background: #E1E8DE; margin: 0 16px 12px; border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #C4482E, #E08E4F); border-radius: 999px; transition: width .2s ease; }
+  .perforation { height: 10px; border-top: 2px dashed var(--line); background-image: radial-gradient(circle, var(--paper) 2px, transparent 2.2px); background-size: 14px 100%; background-position: 7px center; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); background: var(--stripe); border-bottom: 2px solid var(--line-soft); padding: 8px 10px; text-align: left; }
+  tbody td { padding: 9px 10px; border-bottom: 2px solid var(--line-soft); font-size: 13px; vertical-align: middle; }
+  tbody tr:nth-child(even) td { background: var(--stripe); }
+  .date-cell { font-weight: 600; }
+  .weekday-pill { display: inline-block; font-size: 10px; color: var(--moss); margin-left: 4px; }
+
+  .status-icon { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
+  .status-icon.off { color: var(--moss); }
+  .status-icon.work { color: var(--red); }
+  .status-icon svg { width: 15px; height: 15px; }
+
+  .actions { display: flex; gap: 6px; }
+  .btn { border: 2px solid transparent; border-radius: 7px; padding: 6px 10px; font-family: 'Kanit', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: transform .1s ease; }
+  .btn:active { transform: scale(0.95); }
+  .btn-off { background: linear-gradient(90deg, #2F5233, #4A7856); color: #fff; }
+  .btn-off.active { outline: 3px solid #C9E0CC; }
+  .btn-work { background: #fff; border-color: var(--line); color: var(--muted); }
+  .btn-work.active { background: linear-gradient(90deg, #C4482E, #E08E4F); color: #fff; border-color: transparent; }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  .sync-icon { display: inline-flex; }
+  .sync-icon svg { width: 15px; height: 15px; }
+  .sync-done { color: var(--moss); }
+  .sync-pending { color: var(--moss-pale); }
+
+  .empty-note { padding: 16px; text-align: center; color: var(--moss-pale); font-size: 13px; }
+  .legend { display: flex; gap: 16px; font-size: 11px; color: var(--muted); margin: 4px 4px 14px; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend svg { width: 13px; height: 13px; }
+
+  .setup-warning { display: none; background: #fff3f0; border: 2px solid var(--red); color: var(--red); border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-row">
+      <div>
+        <div class="eyebrow">รอบตัดวันหยุด · 16 &rarr; 15</div>
+        <h1 class="display">ระบบติดตามวันหยุดเสาร์</h1>
+      </div>
+      <div class="gen-controls">
+        <select id="monthsSelect">
+          <option value="3">+3 เดือน</option>
+          <option value="6" selected>+6 เดือน</option>
+          <option value="12">+12 เดือน</option>
+          <option value="24">+24 เดือน</option>
+        </select>
+        <button id="genBtn" class="btn-generate" onclick="generateSaturdays()">
+          <span id="genIcon"></span> เติมวันเสาร์
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="setupWarning" class="setup-warning">
+    ⚠️ ยังไม่ได้ตั้งค่า APPS_SCRIPT_URL ในไฟล์ index.html — เปิดไฟล์นี้แล้วแก้บรรทัดบนสุดของ &lt;script&gt; ให้เป็นลิงก์ Web App (/exec) ของ Apps Script ก่อนใช้งาน
+  </div>
+
+  <div id="notifyBanner" class="notify-banner">
+    <span id="notifyIcon"></span>
+    <div class="msg" id="notifyMsg"></div>
+    <span class="close-x" onclick="document.getElementById('notifyBanner').style.display='none'"></span>
+  </div>
+
+  <div class="legend"></div>
+
+  <div id="groups"></div>
+  <div id="toast"></div>
+
+<script>
+  // ★★★ แก้บรรทัดนี้เป็นลิงก์ Web App (/exec) ของ Apps Script ที่ deploy ไว้ ★★★
+  var APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+  var ICON = {
+    check: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>'; },
+    cross: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9 9l6 6M15 9l-6 6"></path></svg>'; },
+    clock: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>'; },
+    plus: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg>'; },
+    bell: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 01-3.46 0"></path></svg>'; },
+    x: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>'; }
+  };
+
+  document.querySelector('.legend').innerHTML =
+    '<span>' + ICON.check('#2F5233') + ' หยุดแล้ว</span>' +
+    '<span>' + ICON.cross('#C4482E') + ' ต้องมาทำงาน</span>';
+  document.getElementById('genIcon').innerHTML = ICON.plus('#fff');
+  document.getElementById('notifyIcon').innerHTML = ICON.bell('#fff');
+  document.querySelector('.close-x').innerHTML = ICON.x('#fff');
+
+  var currentData = null;
+  var notifiedForCycle = null;
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () { t.style.display = 'none'; }, 2600);
+  }
+  function showError(err) {
+    showToast('เกิดข้อผิดพลาด: ' + (err && err.message ? err.message : err));
+  }
+
+  // เรียก Apps Script Web App เป็น JSON API ผ่าน fetch (GET + query string)
+  function callApi(params) {
+    var qs = Object.keys(params).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+    return fetch(APPS_SCRIPT_URL + '?' + qs).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+
+  function checkQuotaNotification(res) {
+    if (!res.groups) return;
+    var cur = res.groups.find(function (g) { return g.isCurrent; });
+    if (!cur || !cur.atCap) return;
+    if (notifiedForCycle === cur.key) return;
+    notifiedForCycle = cur.key;
+    var offDates = cur.rows.filter(function (r) { return r.status === 'หยุด'; }).map(function (r) { return r.dateLabel; });
+    document.getElementById('notifyMsg').textContent = 'รอบ ' + cur.label + ' หยุดเสาร์ที่ ' + offDates.join(' และ ') + ' ครบจำนวนแล้ว';
+    document.getElementById('notifyBanner').style.display = 'flex';
+  }
+
+  function loadDataInitial() {
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+      document.getElementById('setupWarning').style.display = 'block';
+      return;
+    }
+    callApi({ action: 'getData' }).then(function (res) {
+      if (!res.error && (!res.groups || res.groups.length === 0)) {
+        generateSaturdays();
+      } else {
+        renderData(res);
+      }
+    }).catch(showError);
+  }
+
+  function generateSaturdays(monthsOverride) {
+    var months = monthsOverride || parseInt(document.getElementById('monthsSelect').value, 10);
+    var btn = document.getElementById('genBtn');
+    btn.disabled = true;
+    showToast('กำลังเติมวันเสาร์ล่วงหน้า...');
+    callApi({ action: 'generate', months: months }).then(function (res) {
+      btn.disabled = false;
+      showToast(res.generated > 0 ? 'เติมวันเสาร์ใหม่ ' + res.generated + ' วัน' : 'มีวันเสาร์ครบอยู่แล้วในช่วงนี้ ลองเลือกจำนวนเดือนมากขึ้น');
+      renderData(res);
+    }).catch(function (err) { btn.disabled = false; showError(err); });
+  }
+
+  function renderData(res) {
+    currentData = res;
+    var container = document.getElementById('groups');
+    container.innerHTML = '';
+
+    if (res.error) { container.innerHTML = '<div class="empty-note">' + res.error + '</div>'; return; }
+    if (!res.groups || res.groups.length === 0) { container.innerHTML = '<div class="empty-note">ยังไม่มีข้อมูลวันเสาร์ในชีท</div>'; return; }
+
+    res.groups.forEach(function (g) {
+      var pct = res.cap > 0 ? Math.min(100, Math.round((g.offCount / res.cap) * 100)) : 0;
+      var card = document.createElement('div');
+      card.className = 'cycle-card' + (g.isCurrent ? ' current' : '');
+
+      var head = document.createElement('div');
+      head.className = 'cycle-head';
+      head.innerHTML = '<div><div class="cycle-label display">' + g.label + '</div>' +
+        '<div class="cycle-tag">' + (g.isCurrent ? 'รอบปัจจุบัน' : 'รอบอื่น') + '</div></div>' +
+        '<div class="badge ' + (g.atCap ? 'full' : 'ok') + '">' + (g.atCap ? ICON.cross('#fff') : ICON.check('#fff')) + ' ' + g.offCount + '/' + res.cap + '</div>';
+      card.appendChild(head);
+
+      var track = document.createElement('div');
+      track.className = 'progress-track';
+      track.innerHTML = '<div class="progress-fill" style="width:' + pct + '%"></div>';
+      card.appendChild(track);
+
+      var table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>วันที่</th><th>สถานะ</th><th>ปฏิทิน</th><th>จัดการ</th></tr></thead>';
+      var tbody = document.createElement('tbody');
+
+      g.rows.forEach(function (row) {
+        var tr = document.createElement('tr');
+        var tdDate = document.createElement('td');
+        tdDate.className = 'date-cell';
+        tdDate.innerHTML = row.dateLabel + '<span class="weekday-pill">(' + row.weekday + ')</span>';
+        tr.appendChild(tdDate);
+
+        var tdStatus = document.createElement('td');
+        if (row.status === 'หยุด') tdStatus.innerHTML = '<span class="status-icon off">' + ICON.check('#2F5233') + ' หยุด</span>';
+        else if (row.status === 'ทำงาน') tdStatus.innerHTML = '<span class="status-icon work">' + ICON.cross('#C4482E') + ' ทำงาน</span>';
+        else tdStatus.innerHTML = '<span style="color:#8FA893">–</span>';
+        tr.appendChild(tdStatus);
+
+        var tdSync = document.createElement('td');
+        tdSync.innerHTML = row.syncStatus === 'DONE'
+          ? '<span class="sync-icon sync-done" title="ซิงค์ปฏิทินแล้ว">' + ICON.check('#2F5233') + '</span>'
+          : '<span class="sync-icon sync-pending" title="ยังไม่ซิงค์">' + ICON.clock('#8FA893') + '</span>';
+        tr.appendChild(tdSync);
+
+        var tdAction = document.createElement('td');
+        var actions = document.createElement('div');
+        actions.className = 'actions';
+        var btnOff = document.createElement('button');
+        btnOff.className = 'btn btn-off' + (row.status === 'หยุด' ? ' active' : '');
+        btnOff.innerHTML = ICON.check('#fff') + ' หยุด';
+        if (row.status !== 'หยุด' && g.atCap) btnOff.disabled = true;
+        btnOff.onclick = function () { setStatus(row.rowIndex, 'หยุด'); };
+        var btnWork = document.createElement('button');
+        btnWork.className = 'btn btn-work' + (row.status === 'ทำงาน' ? ' active' : '');
+        btnWork.innerHTML = ICON.cross(row.status === 'ทำงาน' ? '#fff' : '#5B6B5E') + ' ทำงาน';
+        btnWork.onclick = function () { setStatus(row.rowIndex, 'ทำงาน'); };
+        actions.appendChild(btnOff);
+        actions.appendChild(btnWork);
+        tdAction.appendChild(actions);
+        tr.appendChild(tdAction);
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      card.appendChild(table);
+      var perf = document.createElement('div');
+      perf.className = 'perforation';
+      card.appendChild(perf);
+      container.appendChild(card);
+    });
+
+    checkQuotaNotification(res);
+  }
+
+  function findRow_(rowIndex) {
+    for (var i = 0; i < currentData.groups.length; i++) {
+      var g = currentData.groups[i];
+      for (var j = 0; j < g.rows.length; j++) {
+        if (g.rows[j].rowIndex === rowIndex) return { group: g, row: g.rows[j] };
+      }
+    }
+    return null;
+  }
+
+  function setStatus(rowIndex, status) {
+    if (!currentData) return;
+    var found = findRow_(rowIndex);
+    if (!found) return;
+    var g = found.group, row = found.row;
+    if (row.status === status) return;
+
+    if (status === 'หยุด' && g.atCap) {
+      showToast('ใช้สิทธิ์หยุดเสาร์ครบ ' + currentData.cap + ' วันในรอบ ' + g.label + ' แล้ว');
+      return;
+    }
+
+    var snapshot = JSON.parse(JSON.stringify(currentData));
+    var wasOff = row.status === 'หยุด';
+    row.status = status;
+    if (status === 'หยุด' && !wasOff) g.offCount++;
+    if (status !== 'หยุด' && wasOff) g.offCount--;
+    g.atCap = g.offCount >= currentData.cap;
+    renderData(currentData);
+
+    callApi({ action: 'updateStatus', rowIndex: rowIndex, status: status }).then(function (res) {
+      if (res.blocked) {
+        currentData = snapshot;
+        renderData(currentData);
+        showToast(res.message);
+      } else {
+        renderData(res);
+      }
+    }).catch(function (err) {
+      currentData = snapshot;
+      renderData(currentData);
+      showError(err);
+    });
+  }
+
+  loadDataInitial();
+</script>
+</body>
+</html>
