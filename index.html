@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="วันหยุดเสาร์">
 <title>ระบบติดตามวันหยุดเสาร์</title>
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Kanit:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -47,7 +47,12 @@
 
   .cycle-card { background: #fff; border: 2px solid var(--line); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
   .cycle-card.current { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(47,82,51,0.12); }
-  .cycle-head { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .cycle-head { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; user-select: none; }
+  .cycle-head-left { display: flex; align-items: center; gap: 8px; }
+  .chevron { transition: transform .18s ease; flex-shrink: 0; }
+  .chevron.open { transform: rotate(180deg); }
+  .cycle-body { overflow: hidden; max-height: 2000px; transition: max-height .25s ease; }
+  .cycle-body.collapsed { max-height: 0; }
   .cycle-label { font-weight: 600; font-size: 14px; }
   .cycle-tag { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss-light); margin-top: 1px; }
   .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
@@ -131,7 +136,7 @@
 
 <script>
   // ★★★ แก้บรรทัดนี้เป็นลิงก์ Web App (/exec) ของ Apps Script ที่ deploy ไว้ ★★★
-  var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxL6gul8EhOa-seEtxnzPiA--teKvar6bBX7OoeJ8I4657qmRgtqCEApfKj12bdE9qo/exec";
+  var APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
   var ICON = {
     check: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>'; },
@@ -139,7 +144,8 @@
     clock: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>'; },
     plus: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg>'; },
     bell: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 01-3.46 0"></path></svg>'; },
-    x: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>'; }
+    x: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>'; },
+    chevron: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>'; }
   };
 
   document.querySelector('.legend').innerHTML =
@@ -151,6 +157,7 @@
 
   var currentData = null;
   var notifiedForCycle = null;
+  var expandedState = {}; // key -> true/false, กันไม่ให้ล้างการเปิด/ปิดตอน re-render
 
   function showToast(msg) {
     var t = document.getElementById('toast');
@@ -219,20 +226,32 @@
 
     res.groups.forEach(function (g) {
       var pct = res.cap > 0 ? Math.min(100, Math.round((g.offCount / res.cap) * 100)) : 0;
+      if (!(g.key in expandedState)) expandedState[g.key] = !!g.isCurrent; // ค่าเริ่มต้น: เปิดเฉพาะรอบปัจจุบัน
+      var isOpen = expandedState[g.key];
+
       var card = document.createElement('div');
       card.className = 'cycle-card' + (g.isCurrent ? ' current' : '');
 
       var head = document.createElement('div');
       head.className = 'cycle-head';
-      head.innerHTML = '<div><div class="cycle-label display">' + g.label + '</div>' +
-        '<div class="cycle-tag">' + (g.isCurrent ? 'รอบปัจจุบัน' : 'รอบอื่น') + '</div></div>' +
+      head.innerHTML =
+        '<div class="cycle-head-left"><span class="chevron' + (isOpen ? ' open' : '') + '">' + ICON.chevron('#5B6B5E') + '</span>' +
+        '<div><div class="cycle-label display">' + g.label + '</div>' +
+        '<div class="cycle-tag">' + (g.isCurrent ? 'รอบปัจจุบัน' : 'รอบอื่น') + '</div></div></div>' +
         '<div class="badge ' + (g.atCap ? 'full' : 'ok') + '">' + (g.atCap ? ICON.cross('#fff') : ICON.check('#fff')) + ' ' + g.offCount + '/' + res.cap + '</div>';
+      head.onclick = function () {
+        expandedState[g.key] = !expandedState[g.key];
+        renderData(currentData);
+      };
       card.appendChild(head);
+
+      var body = document.createElement('div');
+      body.className = 'cycle-body' + (isOpen ? '' : ' collapsed');
 
       var track = document.createElement('div');
       track.className = 'progress-track';
       track.innerHTML = '<div class="progress-fill" style="width:' + pct + '%"></div>';
-      card.appendChild(track);
+      body.appendChild(track);
 
       var table = document.createElement('table');
       table.innerHTML = '<thead><tr><th>วันที่</th><th>สถานะ</th><th>ปฏิทิน</th><th>จัดการ</th></tr></thead>';
@@ -277,10 +296,11 @@
       });
 
       table.appendChild(tbody);
-      card.appendChild(table);
+      body.appendChild(table);
       var perf = document.createElement('div');
       perf.className = 'perforation';
-      card.appendChild(perf);
+      body.appendChild(perf);
+      card.appendChild(body);
       container.appendChild(card);
     });
 
@@ -333,6 +353,12 @@
   }
 
   loadDataInitial();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* ไม่มี SW ก็ยังใช้งานได้ปกติ แค่ไม่ใช่โหมดแอปเต็มรูปแบบ */ });
+    });
+  }
 </script>
 </body>
 </html>
