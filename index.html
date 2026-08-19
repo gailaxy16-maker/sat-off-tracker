@@ -49,6 +49,14 @@
   .jump-btn svg { width: 13px; height: 13px; }
   .jump-btn:active { transform: scale(0.96); }
 
+  /* ── ตัวกรองการแสดงผล — ซ่อนการ์ดรอบที่อยู่นอกช่วงที่เลือกไปเลย (ไม่ใช่แค่
+     พับเก็บ) แยกหน้าที่ชัดเจนจาก dropdown "เติมวันเสาร์" ด้านบนซึ่งมีผลแค่ตอน
+     กดปุ่มสร้างข้อมูลใหม่เท่านั้น ไม่เกี่ยวกับการแสดงผล ── */
+  .view-filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .vf-chip { border: 1.5px solid var(--line); background: #fff; color: var(--muted); border-radius: 999px; padding: 6px 13px; font-family: 'Kanit', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .vf-chip.active { background: linear-gradient(90deg, var(--moss), var(--light)); border-color: transparent; color: #fff; }
+  .vf-chip:active { transform: scale(0.96); }
+
   .notify-banner { display: none; align-items: flex-start; gap: 10px; background: linear-gradient(90deg, var(--moss), var(--light)); color: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(47,82,51,0.25); }
   .notify-banner svg { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; }
   .notify-banner .msg { font-size: 13px; line-height: 1.5; flex: 1; }
@@ -219,6 +227,8 @@
     <button class="jump-btn" onclick="jumpToCurrent()"><span id="jumpIcon"></span> รอบนี้</button>
   </div>
 
+  <div id="viewFilterBar" class="view-filter-bar" style="display:none"></div>
+
   <div id="notifyBanner" class="notify-banner">
     <span id="notifyIcon"></span>
     <div class="msg" id="notifyMsg"></div>
@@ -236,7 +246,7 @@
 
 <script>
   // ★★★ แก้บรรทัดนี้เป็นลิงก์ Web App (/exec) ของ Apps Script ที่ deploy ไว้ ★★★
-  var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxL6gul8EhOa-seEtxnzPiA--teKvar6bBX7OoeJ8I4657qmRgtqCEApfKj12bdE9qo/exec";
+  var APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
   var ICON = {
     check: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>'; },
@@ -589,6 +599,50 @@
     ov.style.display = 'flex';
   }
 
+  // ══════════════════════════════════════════
+  // ตัวกรองการแสดงผล — คนละหน้าที่กับ dropdown "เติมวันเสาร์" ด้านบนโดยสิ้นเชิง
+  // dropdown นั้นแค่กำหนดว่า "จะสร้างข้อมูลเพิ่มไปอีกกี่เดือน" ตอนกดปุ่ม ไม่ได้
+  // เกี่ยวกับสิ่งที่แสดงผล — ตัวกรองนี้ต่างหากที่ควบคุมว่า "จะโชว์การ์ดรอบไหน
+  // บ้าง" โดยซ่อนการ์ดที่ไม่ตรงเงื่อนไขไปเลย (ไม่ใช่แค่พับเก็บแบบปุ่ม chevron)
+  // ══════════════════════════════════════════
+  var VIEW_FILTER_OPTIONS = [
+    { key: 'current', label: 'รอบปัจจุบัน' },
+    { key: '3m', label: '3 เดือนข้างหน้า' },
+    { key: '6m', label: '6 เดือน' },
+    { key: 'all', label: 'ทั้งหมด' }
+  ];
+  var viewFilter = 'all'; // ค่าเริ่มต้น: โชว์ทุกรอบเหมือนพฤติกรรมเดิม ไม่กระทบของเก่า
+
+  function initViewFilterBar() {
+    var bar = document.getElementById('viewFilterBar');
+    bar.innerHTML = VIEW_FILTER_OPTIONS.map(function (o) {
+      return '<button class="vf-chip" id="vf-' + o.key + '" onclick="setViewFilter(\'' + o.key + '\')">' + o.label + '</button>';
+    }).join('');
+    updateViewFilterActive_();
+  }
+  function updateViewFilterActive_() {
+    VIEW_FILTER_OPTIONS.forEach(function (o) {
+      var el = document.getElementById('vf-' + o.key);
+      if (el) el.classList.toggle('active', o.key === viewFilter);
+    });
+  }
+  function setViewFilter(key) {
+    viewFilter = key;
+    updateViewFilterActive_();
+    renderData(currentData);
+  }
+  // เช็คว่ารอบ (cycle group) นี้ควรแสดงตามตัวกรองที่เลือกอยู่ไหม
+  // g.key คือวันที่เริ่มรอบ รูปแบบ "yyyy-MM-dd" (ตรงกับ start ของรอบจาก backend)
+  function cycleWithinFilter_(g) {
+    if (viewFilter === 'all') return true;
+    if (viewFilter === 'current') return !!g.isCurrent;
+    var months = viewFilter === '3m' ? 3 : 6;
+    var cycleStart = new Date(g.key + 'T00:00:00');
+    var today = new Date();
+    var limit = new Date(today.getFullYear(), today.getMonth() + months, today.getDate());
+    return cycleStart <= limit; // รวมรอบปัจจุบัน (เริ่มไปแล้ว) + รอบอนาคตภายใน N เดือน
+  }
+
   // ── กระโดดไปรอบปัจจุบัน + เปิดการ์ดให้อัตโนมัติ (quick win #1) ──
   function jumpToCurrent() {
     if (!currentData || !currentData.groups) return;
@@ -638,12 +692,29 @@
     var container = document.getElementById('groups');
     container.innerHTML = '';
 
-    if (res.error) { container.innerHTML = '<div class="empty-note">' + res.error + '</div>'; document.getElementById('overview').style.display = 'none'; return; }
-    if (!res.groups || res.groups.length === 0) { container.innerHTML = '<div class="empty-note">ยังไม่มีข้อมูลวันเสาร์ในชีท</div>'; document.getElementById('overview').style.display = 'none'; return; }
+    if (res.error) {
+      container.innerHTML = '<div class="empty-note">' + res.error + '</div>';
+      document.getElementById('overview').style.display = 'none';
+      document.getElementById('viewFilterBar').style.display = 'none';
+      return;
+    }
+    if (!res.groups || res.groups.length === 0) {
+      container.innerHTML = '<div class="empty-note">ยังไม่มีข้อมูลวันเสาร์ในชีท</div>';
+      document.getElementById('overview').style.display = 'none';
+      document.getElementById('viewFilterBar').style.display = 'none';
+      return;
+    }
 
     renderOverview(res);
+    document.getElementById('viewFilterBar').style.display = 'flex';
 
-    res.groups.forEach(function (g) {
+    var groupsToShow = res.groups.filter(cycleWithinFilter_);
+    if (groupsToShow.length === 0) {
+      container.innerHTML = '<div class="empty-note">ไม่มีรอบที่ตรงกับตัวกรองนี้ — ลองเลือก "ทั้งหมด"</div>';
+      return;
+    }
+
+    groupsToShow.forEach(function (g) {
       var pct = res.cap > 0 ? Math.min(100, Math.round((g.offCount / res.cap) * 100)) : 0;
       if (!(g.key in expandedState)) expandedState[g.key] = !!g.isCurrent; // ค่าเริ่มต้น: เปิดเฉพาะรอบปัจจุบัน
       var isOpen = expandedState[g.key];
@@ -816,6 +887,7 @@
     });
   }
 
+  initViewFilterBar();
   loadDataInitial();
 
   if ('serviceWorker' in navigator) {
