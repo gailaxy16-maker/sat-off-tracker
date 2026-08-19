@@ -1,7 +1,7 @@
 // Service worker สำหรับ "ระบบติดตามวันหยุดเสาร์"
 // แคชแค่ app shell (ไฟล์หน้าตา) — ข้อมูลจริง (getData/updateStatus) ยิงตรงไป
 // Apps Script เสมอ ไม่แคช เพื่อไม่ให้เห็นข้อมูลเก่าค้าง
-const CACHE_NAME = 'sat-off-tracker-v3';
+const CACHE_NAME = 'sat-off-tracker-v4';
 const APP_SHELL = [
   './',
   './index.html',
