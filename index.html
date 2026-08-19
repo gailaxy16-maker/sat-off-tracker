@@ -246,7 +246,7 @@
 
 <script>
   // ★★★ แก้บรรทัดนี้เป็นลิงก์ Web App (/exec) ของ Apps Script ที่ deploy ไว้ ★★★
-  var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxL6gul8EhOa-seEtxnzPiA--teKvar6bBX7OoeJ8I4657qmRgtqCEApfKj12bdE9qo/exec";
+  var APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
   var ICON = {
     check: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>'; },
@@ -661,19 +661,24 @@
       document.getElementById('setupWarning').style.display = 'block';
       return;
     }
-    loadHolidays(); // ยิงคู่ขนานไปเลย ไม่ต้องรอ ไม่ critical ต่อการโหลดข้อมูลหลัก
+    // ★ FIX: เดิมยิง loadHolidays() คู่ขนานกับ getData() พร้อมกัน — พอทั้ง 2
+    // คำขอไปเปิด Google Sheet ตัวเดียวกันพร้อมกัน Apps Script จะเกิด lock
+    // ชนกัน ทำให้คำขอค้างนานผิดปกติจน timeout (เห็นเป็น 404 จาก
+    // googleusercontent หลัง 25+ วินาที) — เปลี่ยนเป็นยิงทีละคำขอเสมอ ไม่ว่า
+    // จะเป็น path ปกติหรือ path ชีทว่าง (ครั้งแรกที่ยังไม่มีข้อมูล) ก็ตาม
     callApi({ action: 'getData' }).then(function (res) {
       if (!res.error && (!res.groups || res.groups.length === 0)) {
-        generateSaturdays();
+        generateSaturdays(null, loadHolidays); // เติมวันเสาร์ก่อน แล้วค่อยโหลดวันหยุดทีหลัง
       } else {
         renderData(res);
         // ครั้งแรกที่โหลดหน้า ให้เลื่อนไปรอบปัจจุบันอัตโนมัติเลย ไม่ต้องรอผู้ใช้กด
         setTimeout(jumpToCurrent, 300);
+        loadHolidays();
       }
     }).catch(showError);
   }
 
-  function generateSaturdays(monthsOverride) {
+  function generateSaturdays(monthsOverride, onDoneCallback) {
     var months = monthsOverride || parseInt(document.getElementById('monthsSelect').value, 10);
     var btn = document.getElementById('genBtn');
     btn.disabled = true;
@@ -684,6 +689,7 @@
       btn.innerHTML = origHtml;
       showToast(res.generated > 0 ? ('✅ เติมวันเสาร์ใหม่ ' + res.generated + ' วัน') : 'มีวันเสาร์ครบอยู่แล้วในช่วงนี้ ลองเลือกจำนวนเดือนมากขึ้น');
       renderData(res);
+      if (typeof onDoneCallback === 'function') onDoneCallback(); // เรียกทีหลัง generate เสร็จแล้วเท่านั้น กันยิงคู่ขนาน
     }).catch(function (err) { btn.disabled = false; btn.innerHTML = origHtml; showError(err); });
   }
 
