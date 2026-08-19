@@ -12,7 +12,6 @@ var THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.�
 function doGet(e) {
   var action = e && e.parameter ? e.parameter.action : null;
 
-  // ไม่มี action -> เปิดตรงจาก URL ของ Apps Script ได้เหมือนเดิม (เผื่อไว้ใช้ทดสอบ)
   if (!action) {
     return HtmlService.createHtmlOutputFromFile('Index')
         .setTitle('ระบบติดตามวันหยุดเสาร์')
@@ -20,7 +19,6 @@ function doGet(e) {
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  // มี action -> ทำงานเป็น JSON API ให้หน้าเว็บภายนอก (เช่น GitHub Pages) เรียกผ่าน fetch()
   var result;
   try {
     if (action === "getData") {
@@ -29,6 +27,8 @@ function doGet(e) {
       result = updateStatusAndSync(parseInt(e.parameter.rowIndex, 10), e.parameter.status);
     } else if (action === "generate") {
       result = generateSaturdays(parseInt(e.parameter.months, 10) || 6);
+    } else if (action === "deleteRow") {
+      result = deleteSaturdayRow(parseInt(e.parameter.rowIndex, 10));
     } else {
       result = { error: "ไม่รู้จัก action: " + action };
     }
@@ -44,7 +44,10 @@ function thaiShort_(date) {
   return date.getDate() + " " + THAI_MONTHS[date.getMonth()] + " " + String(date.getFullYear() + 543).slice(-2);
 }
 
-// คำนวณรอบ (cycle) ที่วันที่นี้สังกัดอยู่ ตาม CUTOFF_DAY
+function isoDate_(date, tz) {
+  return Utilities.formatDate(date, tz || Session.getScriptTimeZone(), "yyyy-MM-dd");
+}
+
 function getCycle_(date) {
   var y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
   var start = d >= CUTOFF_DAY ? new Date(y, m, CUTOFF_DAY) : new Date(y, m - 1, CUTOFF_DAY);
@@ -67,6 +70,7 @@ function getSaturdaysData() {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return { groups: [], cap: CAP };
 
+  var tz = Session.getScriptTimeZone();
   var data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
   var today = new Date();
   var todayKey = getCycle_(today).key;
@@ -78,7 +82,7 @@ function getSaturdaysData() {
     var dateVal = data[i][0];
     var status = data[i][1];
     var syncStatus = data[i][2];
-    if (!(dateVal instanceof Date)) continue; // ข้ามแถวที่วันที่ไม่ถูกต้อง
+    if (!(dateVal instanceof Date)) continue;
 
     var cyc = getCycle_(dateVal);
     if (!groupsMap[cyc.key]) {
@@ -96,6 +100,7 @@ function getSaturdaysData() {
     g.rows.push({
       rowIndex: i + 2,
       dateLabel: thaiShort_(dateVal),
+      dateISO: isoDate_(dateVal, tz), // ★ ใหม่: ใช้สร้างปฏิทินรายเดือนฝั่ง frontend
       weekday: ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"][dateVal.getDay()],
       status: status || "",
       syncStatus: syncStatus || ""
@@ -114,8 +119,6 @@ function getSaturdaysData() {
 
 /**
  * สร้างแถววันเสาร์ล่วงหน้าให้อัตโนมัติ ไม่จำกัดจำนวนครั้ง — กดซ้ำเพื่อขยายต่อไปเรื่อยๆ ได้
- * เริ่มสแกนจากต้นรอบปัจจุบันเสมอ (กันวันตกหล่น) และขยายไปอีก monthsAhead เดือน
- * นับจากวันที่ล่าสุดที่มีอยู่แล้วในชีท (ถ้ามี) หรือจากวันนี้ (ถ้าชีทว่าง/ยังไปไม่ถึงวันนี้)
  */
 function generateSaturdays(monthsAhead) {
   var sheet = getSheet_();
@@ -138,7 +141,7 @@ function generateSaturdays(monthsAhead) {
   }
 
   var today = new Date();
-  var start = getCycle_(today).start; // สแกนตั้งแต่ต้นรอบปัจจุบันเผื่อมีวันตกหล่น
+  var start = getCycle_(today).start;
   var base = (maxDate && maxDate > today) ? maxDate : today;
   var end = new Date(base.getFullYear(), base.getMonth() + monthsAhead, base.getDate());
 
@@ -168,8 +171,6 @@ function generateSaturdays(monthsAhead) {
 
 /**
  * เปลี่ยนสถานะแถว + ซิงค์ปฏิทิน
- * - ถ้าจะตั้งเป็น "หยุด" แต่รอบนั้นครบโควตาแล้ว จะไม่บันทึก และคืนค่า blocked:true
- * - ถ้าเปลี่ยนจาก "หยุด" กลับเป็น "ทำงาน" และเคยซิงค์ปฏิทินไว้ (DONE) จะลบ event ในปฏิทินให้ด้วย
  */
 function updateStatusAndSync(rowIndex, status) {
   var sheet = getSheet_();
@@ -201,11 +202,10 @@ function updateStatusAndSync(rowIndex, status) {
   if (status === "หยุด") {
     if (syncStatus !== "DONE" && dateVal instanceof Date) {
       var event = calendar.createAllDayEvent("หยุดเสาร์ (สิทธิ์โควตา)", dateVal);
-      event.addPopupReminder(24 * 60); // แจ้งเตือนล่วงหน้า 1 วัน
+      event.addPopupReminder(24 * 60);
       sheet.getRange(rowIndex, 3).setValue("DONE");
     }
   } else if (syncStatus === "DONE" && dateVal instanceof Date) {
-    // กลับสถานะเป็นทำงาน — ลบ event ที่เคยซิงค์ไว้ ไม่ให้ค้างในปฏิทิน
     var events = calendar.getEventsForDay(dateVal);
     events.forEach(function (ev) {
       if (ev.getTitle().indexOf("หยุดเสาร์") !== -1) ev.deleteEvent();
@@ -215,5 +215,32 @@ function updateStatusAndSync(rowIndex, status) {
 
   var result = getSaturdaysData();
   result.blocked = false;
+  return result;
+}
+
+/**
+ * ★ ใหม่: ลบแถววันเสาร์ทิ้งทั้งแถว (ใช้ตอนเผลอ "เติมวันเสาร์" เกินความจำเป็น
+ * หรือไม่ต้องการติดตามวันนั้นแล้ว) — ถ้าแถวนั้นเคยซิงค์ปฏิทินไว้ (DONE) จะลบ
+ * event ในปฏิทินให้ก่อนเสมอ กันไม่ให้มี event ค้างอยู่โดยไม่มีแถวอ้างอิงในชีท
+ */
+function deleteSaturdayRow(rowIndex) {
+  var sheet = getSheet_();
+  if (!sheet) return { error: "ไม่พบชีท SaturdayTracker" };
+
+  var dateVal = sheet.getRange(rowIndex, 1).getValue();
+  var syncStatus = sheet.getRange(rowIndex, 3).getValue();
+
+  if (syncStatus === "DONE" && dateVal instanceof Date) {
+    var calendar = CalendarApp.getDefaultCalendar();
+    var events = calendar.getEventsForDay(dateVal);
+    events.forEach(function (ev) {
+      if (ev.getTitle().indexOf("หยุดเสาร์") !== -1) ev.deleteEvent();
+    });
+  }
+
+  sheet.deleteRow(rowIndex);
+
+  var result = getSaturdaysData();
+  result.deleted = true;
   return result;
 }

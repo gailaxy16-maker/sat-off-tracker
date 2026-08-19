@@ -116,6 +116,59 @@
   .legend svg { width: 13px; height: 13px; }
 
   .setup-warning { display: none; background: #fff3f0; border: 2px solid var(--red); color: var(--red); border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; line-height: 1.6; }
+
+  .gen-hint { font-size: 10.5px; color: rgba(255,255,255,0.65); margin-top: 5px; line-height: 1.5; }
+
+  /* ── date cell คลิกได้ → เปิดปฏิทินรายเดือน ── */
+  .date-cell.clickable { cursor: pointer; }
+  .date-cell.clickable:active { opacity: 0.6; }
+  .date-cell .cal-hint { display: inline-block; margin-left: 3px; opacity: 0.55; }
+  .date-cell .cal-hint svg { width: 11px; height: 11px; vertical-align: -1px; }
+
+  /* ── ปุ่มลบราย SN ── */
+  .btn-del { background: #fff; border-color: var(--line); color: var(--red); padding: 6px 8px; }
+  .btn-del svg { width: 14px; height: 14px; }
+
+  /* ── MODAL (ใช้ร่วมกัน: confirm delete + calendar month view) ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(31,42,36,0.55); z-index: 100; align-items: flex-end; justify-content: center; padding: 0; }
+  .modal-overlay.show { display: flex; }
+  .modal-card { background: var(--paper); width: 100%; max-width: 480px; border-radius: 18px 18px 0 0; padding: 18px; max-height: 88vh; overflow-y: auto; box-shadow: 0 -8px 30px rgba(0,0,0,0.25); animation: modalUp .22s ease; }
+  @keyframes modalUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; }
+  .modal-title { font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 700; color: var(--dark); }
+  .modal-close { background: var(--stripe); border: none; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); flex-shrink: 0; }
+  .modal-close svg { width: 15px; height: 15px; }
+  .modal-body { font-size: 13.5px; line-height: 1.7; color: var(--ink); }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .modal-actions .btn { flex: 1; justify-content: center; padding: 10px; font-size: 13px; }
+  .btn-danger { background: linear-gradient(90deg, var(--red), var(--amber)); color: #fff; }
+  .btn-neutral { background: #fff; border-color: var(--line); color: var(--muted); }
+
+  /* ── calendar grid ในโมดัล ── */
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-nav-btn { background: var(--stripe); border: none; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--moss); }
+  .cal-nav-btn svg { width: 16px; height: 16px; }
+  .cal-nav-label { font-family: 'Kanit', sans-serif; font-weight: 700; font-size: 14.5px; color: var(--dark); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px; }
+  .cal-wd { text-align: center; font-size: 10.5px; color: var(--muted); font-weight: 600; padding-bottom: 4px; }
+  .cal-day { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 9px; font-size: 12.5px; font-weight: 600; color: var(--ink); background: #fff; border: 1.5px solid var(--line-soft); }
+  .cal-day.blank { background: transparent; border: none; }
+  .cal-day.today { border-color: var(--moss); border-width: 2px; }
+  .cal-day.off { background: linear-gradient(135deg, var(--moss), var(--light)); color: #fff; border-color: transparent; }
+  .cal-day.work { background: linear-gradient(135deg, var(--red), var(--amber)); color: #fff; border-color: transparent; }
+  .cal-day.unset-sat { background: #FFF3E6; border-color: #F3D3AE; color: var(--amber); }
+  .cal-day.holiday::after { content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--red); }
+  .cal-day.off.holiday::after, .cal-day.work.holiday::after { background: #fff; }
+  .cal-day.focus-ring { outline: 3px solid rgba(47,82,51,0.35); outline-offset: 1px; }
+  .cal-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10.5px; color: var(--muted); margin: 6px 2px 12px; }
+  .cal-legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .cal-legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .cal-holiday-list { border-top: 1.5px dashed var(--line-soft); padding-top: 10px; }
+  .cal-holiday-list .hl-title { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
+  .cal-holiday-item { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; padding: 4px 0; }
+  .cal-holiday-item .hd-date { font-weight: 700; color: var(--red); min-width: 60px; flex-shrink: 0; }
+  .cal-empty-note { font-size: 11.5px; color: var(--moss-pale); text-align: center; padding: 8px 0; }
+  .cal-row-status { background: #fff; border: 1.5px solid var(--line-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 </style>
 </head>
 <body>
@@ -139,6 +192,7 @@
           </button>
         </div>
       </div>
+      <div class="gen-hint">* เติมวันเสาร์ล่วงหน้าต่อจากวันไกลสุดที่มีอยู่แล้ว (ไม่ลบของเดิม) — ถ้าเลือกจำนวนเดือนน้อยกว่าที่เติมไว้แล้ว จะไม่มีอะไรเพิ่มขึ้น ลบรายวันได้ที่ปุ่ม 🗑 ในตาราง</div>
     </div>
   </div>
 
@@ -159,12 +213,16 @@
 
   <div class="legend"></div>
 
+  <div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this) closeModal()">
+    <div class="modal-card" id="modalCard"></div>
+  </div>
+
   <div id="groups"></div>
   <div id="toast"></div>
 
 <script>
   // ★★★ แก้บรรทัดนี้เป็นลิงก์ Web App (/exec) ของ Apps Script ที่ deploy ไว้ ★★★
-  var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxL6gul8EhOa-seEtxnzPiA--teKvar6bBX7OoeJ8I4657qmRgtqCEApfKj12bdE9qo/exec";
+  var APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
   var ICON = {
     check: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>'; },
@@ -175,7 +233,41 @@
     x: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>'; },
     chevron: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>'; },
     target: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3"></circle></svg>'; },
-    spinner: function (color) { return '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round"><path d="M12 3a9 9 0 019 9"></path></svg>'; }
+    spinner: function (color) { return '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round"><path d="M12 3a9 9 0 019 9"></path></svg>'; },
+    trash: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v13a1 1 0 01-1 1H8a1 1 0 01-1-1V7h10z"></path></svg>'; },
+    calendar: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"></rect><path d="M8 3v4M16 3v4M3.5 10h17"></path></svg>'; },
+    arrowL: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>'; },
+    arrowR: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>'; }
+  };
+
+  // ── วันหยุดราชการไทยที่ประกาศแล้ว ปี พ.ศ. 2569 (ค.ศ. 2026) — อ้างอิงมติ ครม.
+  // ล่าสุด (พ.ค. 2569) ใช้ประกอบการตัดสินใจเลือกวันหยุดเสาร์เท่านั้น ไม่ใช่ข้อมูล
+  // real-time — ปีอื่นที่ยังไม่ประกาศ (เช่นวันหยุดพุทธศาสนาแบบจันทรคติของปีถัดไป)
+  // จะไม่มีข้อมูลแสดง ★ 16 ต.ค. 69 เป็นวันหยุดพิเศษเฉพาะพื้นที่ กทม. เท่านั้น
+  var THAI_HOLIDAYS = {
+    "2026-01-01": "วันขึ้นปีใหม่",
+    "2026-01-02": "วันหยุดพิเศษ (มติ ครม.)",
+    "2026-03-03": "วันมาฆบูชา",
+    "2026-04-06": "วันจักรี",
+    "2026-04-13": "วันสงกรานต์",
+    "2026-04-14": "วันสงกรานต์",
+    "2026-04-15": "วันสงกรานต์",
+    "2026-05-04": "วันฉัตรมงคล",
+    "2026-05-13": "วันพืชมงคล",
+    "2026-05-31": "วันวิสาขบูชา",
+    "2026-06-01": "ชดเชยวันวิสาขบูชา",
+    "2026-06-03": "วันเฉลิมพระชนมพรรษา พระราชินี",
+    "2026-07-28": "วันเฉลิมพระชนมพรรษา ร.10",
+    "2026-07-29": "วันอาสาฬหบูชา",
+    "2026-07-30": "วันเข้าพรรษา",
+    "2026-08-12": "วันแม่แห่งชาติ",
+    "2026-10-13": "วันนวมินทรมหาราช",
+    "2026-10-16": "วันหยุดพิเศษ (เฉพาะ กทม.)",
+    "2026-10-23": "วันปิยมหาราช",
+    "2026-12-05": "วันพ่อแห่งชาติ",
+    "2026-12-07": "ชดเชยวันพ่อแห่งชาติ",
+    "2026-12-10": "วันรัฐธรรมนูญ",
+    "2026-12-31": "วันสิ้นปี"
   };
 
   document.querySelector('.legend').innerHTML =
@@ -215,6 +307,148 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     });
+  }
+
+  // ══════════════════════════════════════════
+  // MODAL SYSTEM (ใช้ร่วมกัน: ยืนยันลบ + ดูปฏิทินรายเดือน)
+  // ══════════════════════════════════════════
+  function openModal(html) {
+    document.getElementById('modalCard').innerHTML = html;
+    document.getElementById('modalOverlay').classList.add('show');
+  }
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('show');
+  }
+
+  // ── ยืนยันก่อนลบวันเสาร์ (destructive action ต้องถามก่อนเสมอ) ──
+  function confirmDeleteRow(rowIndex, dateLabel, hasSync) {
+    var warn = hasSync ? '<div style="background:#FFF3E6;border:1.5px solid #F3D3AE;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px;color:#8a5a1f">⚠️ วันนี้เคยซิงค์ปฏิทินไว้แล้ว การลบจะลบ event ในปฏิทินออกด้วย</div>' : '';
+    openModal(
+      '<div class="modal-hd"><div class="modal-title">ลบวันเสาร์นี้?</div>' +
+      '<button class="modal-close" onclick="closeModal()">' + ICON.x('#5B6B5E') + '</button></div>' +
+      '<div class="modal-body">ต้องการลบแถววันเสาร์ที่ <b>' + dateLabel + '</b> ออกจากระบบใช่ไหม การลบไม่สามารถย้อนกลับได้' + warn + '</div>' +
+      '<div class="modal-actions">' +
+      '<button class="btn btn-neutral" onclick="closeModal()">ยกเลิก</button>' +
+      '<button class="btn btn-danger" id="confirmDelBtn" onclick="doDeleteRow(' + rowIndex + ')">' + ICON.trash('#fff') + ' ลบเลย</button>' +
+      '</div>'
+    );
+  }
+  function doDeleteRow(rowIndex) {
+    var btn = document.getElementById('confirmDelBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = ICON.spinner('#fff') + ' กำลังลบ...'; }
+    callApi({ action: 'deleteRow', rowIndex: rowIndex }).then(function (res) {
+      closeModal();
+      renderData(res);
+      showToast(ICON.check('#8FA893') + '<span>ลบวันเสาร์เรียบร้อย</span>');
+    }).catch(function (err) {
+      closeModal();
+      showError(err);
+    });
+  }
+
+  // ══════════════════════════════════════════
+  // CALENDAR MONTH VIEW — คลิกวันที่ในตาราง → เห็นทั้งเดือน พร้อมวันหยุดราชการ
+  // ══════════════════════════════════════════
+  var calState = { y: null, m: null, focusISO: null }; // m = 0-11
+  var THAI_MONTHS_FULL = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+  var WEEKDAY_TH = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
+  function localISO_(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+
+  function openCalendarModal(iso) {
+    var d = new Date(iso + 'T00:00:00');
+    calState.y = d.getFullYear();
+    calState.m = d.getMonth();
+    calState.focusISO = iso;
+    renderCalendarModal();
+  }
+  function calShift(delta) {
+    var d = new Date(calState.y, calState.m + delta, 1);
+    calState.y = d.getFullYear();
+    calState.m = d.getMonth();
+    renderCalendarModal();
+  }
+
+  // สร้าง map ของ SN วันเสาร์ที่ระบบติดตามอยู่ ทุกรอบรวมกัน คีย์ = dateISO
+  function buildSatMap_() {
+    var map = {};
+    if (currentData && currentData.groups) {
+      currentData.groups.forEach(function (g) {
+        g.rows.forEach(function (r) { map[r.dateISO] = r; });
+      });
+    }
+    return map;
+  }
+
+  function renderCalendarModal() {
+    var y = calState.y, m = calState.m;
+    var satMap = buildSatMap_();
+    var firstDow = new Date(y, m, 1).getDay();
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+    var todayISO2 = localISO_(new Date());
+
+    var grid = '<div class="cal-grid">';
+    WEEKDAY_TH.forEach(function (w) { grid += '<div class="cal-wd">' + w + '</div>'; });
+    for (var b = 0; b < firstDow; b++) grid += '<div class="cal-day blank"></div>';
+
+    var monthHolidays = [];
+    for (var day = 1; day <= daysInMonth; day++) {
+      var iso = y + '-' + ('0' + (m + 1)).slice(-2) + '-' + ('0' + day).slice(-2);
+      var sat = satMap[iso];
+      var holiday = THAI_HOLIDAYS[iso];
+      if (holiday) monthHolidays.push({ iso: iso, day: day, name: holiday });
+
+      var cls = 'cal-day';
+      if (iso === todayISO2) cls += ' today';
+      if (sat) cls += (sat.status === 'หยุด' ? ' off' : sat.status === 'ทำงาน' ? ' work' : ' unset-sat');
+      if (holiday) cls += ' holiday';
+      if (iso === calState.focusISO) cls += ' focus-ring';
+
+      grid += '<div class="' + cls + '" title="' + (holiday || '') + '">' + day + '</div>';
+    }
+    grid += '</div>';
+
+    var legend =
+      '<div class="cal-legend">' +
+      '<span><span class="dot" style="background:linear-gradient(135deg,var(--moss),var(--light))"></span>หยุดแล้ว</span>' +
+      '<span><span class="dot" style="background:linear-gradient(135deg,var(--red),var(--amber))"></span>ต้องทำงาน</span>' +
+      '<span><span class="dot" style="background:#FFF3E6;border:1.5px solid #F3D3AE"></span>เสาร์ยังไม่ระบุ</span>' +
+      '<span><span class="dot" style="background:var(--red)"></span>วันหยุดราชการ</span>' +
+      '</div>';
+
+    var focusRow = satMap[calState.focusISO];
+    var focusInfo = '';
+    if (focusRow) {
+      var stLabel = focusRow.status === 'หยุด' ? '✅ หยุดแล้ว' : focusRow.status === 'ทำงาน' ? '❌ ต้องมาทำงาน' : '🟡 ยังไม่ระบุ';
+      focusInfo = '<div class="cal-row-status"><span>เสาร์ที่ ' + focusRow.dateLabel + '</span><b>' + stLabel + '</b></div>';
+    }
+
+    var holidayList;
+    if (monthHolidays.length) {
+      holidayList = '<div class="cal-holiday-list"><div class="hl-title">วันหยุดราชการเดือนนี้</div>' +
+        monthHolidays.map(function (h) {
+          return '<div class="cal-holiday-item"><span class="hd-date">' + h.day + ' ' + THAI_MONTHS[m] + '</span><span>' + h.name + '</span></div>';
+        }).join('') + '</div>';
+    } else {
+      holidayList = '<div class="cal-holiday-list"><div class="cal-empty-note">' +
+        (THAI_HOLIDAYS_YEAR_KNOWN(y) ? 'เดือนนี้ไม่มีวันหยุดราชการ' : 'ยังไม่มีข้อมูลวันหยุดราชการสำหรับปี พ.ศ. ' + (y + 543)) +
+        '</div></div>';
+    }
+
+    openModal(
+      '<div class="modal-hd"><div class="modal-title">' + ICON.calendar('#2F5233') + ' ' + THAI_MONTHS_FULL[m] + ' ' + (y + 543) + '</div>' +
+      '<button class="modal-close" onclick="closeModal()">' + ICON.x('#5B6B5E') + '</button></div>' +
+      focusInfo +
+      '<div class="cal-nav">' +
+      '<button class="cal-nav-btn" onclick="calShift(-1)">' + ICON.arrowL('#2F5233') + '</button>' +
+      '<div class="cal-nav-label">' + THAI_MONTHS_FULL[m] + ' ' + (y + 543) + '</div>' +
+      '<button class="cal-nav-btn" onclick="calShift(1)">' + ICON.arrowR('#2F5233') + '</button>' +
+      '</div>' +
+      grid + legend + holidayList
+    );
+  }
+  function THAI_HOLIDAYS_YEAR_KNOWN(y) {
+    for (var k in THAI_HOLIDAYS) { if (k.indexOf(y + '-') === 0) return true; }
+    return false;
   }
 
   function checkQuotaNotification(res) {
@@ -335,8 +569,9 @@
         g.rows.forEach(function (row) {
           var tr = document.createElement('tr');
           var tdDate = document.createElement('td');
-          tdDate.className = 'date-cell';
-          tdDate.innerHTML = row.dateLabel + '<span class="weekday-pill">(' + row.weekday + ')</span>';
+          tdDate.className = 'date-cell clickable';
+          tdDate.innerHTML = row.dateLabel + '<span class="weekday-pill">(' + row.weekday + ')</span><span class="cal-hint">' + ICON.calendar('#8FA893') + '</span>';
+          tdDate.onclick = function () { openCalendarModal(row.dateISO); };
           tr.appendChild(tdDate);
 
           var tdStatus = document.createElement('td');
@@ -380,8 +615,17 @@
           }
           btnWork.onclick = function () { setStatus(row.rowIndex, 'ทำงาน'); };
 
+          // ★ ใหม่: ปุ่มลบราย SN (เอาไว้ลบวันเสาร์ที่เผลอเติมเกินความจำเป็น)
+          var btnDel = document.createElement('button');
+          btnDel.className = 'btn btn-del';
+          btnDel.title = 'ลบวันเสาร์นี้';
+          btnDel.innerHTML = ICON.trash('#C4482E');
+          if (pendingHere) btnDel.disabled = true;
+          btnDel.onclick = function () { confirmDeleteRow(row.rowIndex, row.dateLabel, row.syncStatus === 'DONE'); };
+
           actions.appendChild(btnOff);
           actions.appendChild(btnWork);
+          actions.appendChild(btnDel);
           tdAction.appendChild(actions);
           tr.appendChild(tdAction);
           tbody.appendChild(tr);
