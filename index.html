@@ -12,11 +12,12 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="favicon-32.png">
+<!-- ★ หมายเหตุ: ไฟล์นี้เสิร์ฟจาก Apps Script โดยตรง (เปิดผ่าน URL .../exec)
+     ไม่มี manifest/ไอคอน/Service Worker แบบฝั่ง GitHub Pages -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Kanit:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    /* ── ธีมสีหลัก ยึดจากไอคอนแอป (gradient เดียวกันทั้งไอคอน/หัวเว็บ/theme-color) ── */
     --dark: #1F2A24; --mid: #2A4331; --light: #4A7856;
     --paper: #F7F8F3; --stripe: #EDF3EA; --ink: #1F2A24;
     --line: #AEC2B0; --line-soft: #D3DED4; --moss: #2F5233;
@@ -27,7 +28,7 @@
   body { font-family: 'IBM Plex Sans Thai', sans-serif; margin: 0; padding: 14px; background: var(--paper); color: var(--ink); max-width: 480px; margin-left: auto; margin-right: auto; }
   .display { font-family: 'Kanit', sans-serif; }
 
-  /* ── HEADER — sticky กันหลงรอบเวลา scroll ยาว (quick win #4) ── */
+  /* ── HEADER ── */
   .header-wrap { position: sticky; top: 0; z-index: 40; padding-top: 6px; margin: -6px -14px 0; padding-left: 14px; padding-right: 14px; background: var(--paper); }
   .header { border-radius: 14px; padding: 16px 18px; background: linear-gradient(120deg, var(--dark), var(--mid) 55%, var(--light)); color: #fff; margin-bottom: 10px; box-shadow: 0 6px 18px rgba(31,42,36,0.18); }
   .header-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
@@ -40,18 +41,17 @@
   .btn-generate { border: 1.5px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); color: #fff; border-radius: 8px; padding: 7px 12px; font-family: 'Kanit', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
   .btn-generate[disabled] { opacity: 0.6; cursor: wait; }
   .btn-generate svg { width: 14px; height: 14px; }
+  .gen-hint { font-size: 10.5px; color: rgba(255,255,255,0.65); margin-top: 5px; line-height: 1.5; }
 
-  /* ── Overview strip (สรุปภาพรวม ปีนี้ใช้สิทธิ์ไปกี่วันแล้ว) ── */
+  /* ── Overview strip ── */
   .overview { display: flex; align-items: center; gap: 10px; background: #fff; border: 2px solid var(--line-soft); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; }
-  .overview .ov-num { font-family: 'Kanit', sans-serif; font-size: 18px; font-weight: 700; color: var(--moss); }
   .overview .ov-label { font-size: 11.5px; color: var(--muted); flex: 1; }
+  .overview .ov-label b { font-family: 'Kanit', sans-serif; font-size: 16px; color: var(--moss); }
   .jump-btn { border: 1.5px solid var(--line); background: #fff; color: var(--moss); border-radius: 8px; padding: 6px 10px; font-family: 'Kanit', sans-serif; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
   .jump-btn svg { width: 13px; height: 13px; }
   .jump-btn:active { transform: scale(0.96); }
 
-  /* ── ตัวกรองการแสดงผล — ซ่อนการ์ดรอบที่อยู่นอกช่วงที่เลือกไปเลย (ไม่ใช่แค่
-     พับเก็บ) แยกหน้าที่ชัดเจนจาก dropdown "เติมวันเสาร์" ด้านบนซึ่งมีผลแค่ตอน
-     กดปุ่มสร้างข้อมูลใหม่เท่านั้น ไม่เกี่ยวกับการแสดงผล ── */
+  /* ── ตัวกรองการแสดงผล ── */
   .view-filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .vf-chip { border: 1.5px solid var(--line); background: #fff; color: var(--muted); border-radius: 999px; padding: 6px 13px; font-family: 'Kanit', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .vf-chip.active { background: linear-gradient(90deg, var(--moss), var(--light)); border-color: transparent; color: #fff; }
@@ -63,29 +63,44 @@
   .notify-banner .close-x { cursor: pointer; opacity: 0.8; flex-shrink: 0; }
   .notify-banner .close-x svg { width: 16px; height: 16px; }
 
-  #toast { display: none; position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; font-size: 13px; padding: 10px 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 50; max-width: 90vw; text-align: center; display: flex; align-items: center; gap: 8px; }
+  /* ── TOAST ── */
+  #toast { display: none; position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; font-size: 13px; padding: 10px 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 150; max-width: 90vw; text-align: center; align-items: center; gap: 8px; }
   #toast svg { width: 15px; height: 15px; flex-shrink: 0; }
   .toast-undo-btn { background: none; border: none; color: var(--amber); font-family: 'Kanit', sans-serif; font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; padding: 0; margin-left: 4px; flex-shrink: 0; }
 
+  /* ── CYCLE CARD ── */
   .cycle-card { background: #fff; border: 2px solid var(--line); border-radius: 12px; margin-bottom: 16px; overflow: hidden; scroll-margin-top: 96px; }
   .cycle-card.current { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(47,82,51,0.12); }
-  .cycle-head { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; user-select: none; }
-  .cycle-head-left { display: flex; align-items: center; gap: 8px; }
+  .cycle-head { padding: 12px 12px 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; user-select: none; }
+  .cycle-head-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .head-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .chevron { transition: transform .18s ease; flex-shrink: 0; }
   .chevron.open { transform: rotate(180deg); }
   .cycle-body { overflow: hidden; max-height: 2000px; transition: max-height .25s ease; }
   .cycle-body.collapsed { max-height: 0; }
   .cycle-label { font-weight: 600; font-size: 14px; }
   .cycle-tag { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss-light); margin-top: 1px; }
+  .cycle-tag.past { color: var(--moss-pale); }
   .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
   .badge.ok { background: linear-gradient(90deg, var(--moss), #6B8F71); }
   .badge.full { background: linear-gradient(90deg, var(--red), var(--amber)); }
 
+  /* ★ ปุ่ม ✕ ลบวันเสาร์ทั้งรอบ — โชว์ทุกการ์ด */
+  .btn-del-cycle { background: none; border: 0; padding: 4px; cursor: pointer; display: inline-flex; border-radius: 8px; }
+  .btn-del-cycle svg { width: 24px; height: 24px; }
+  .btn-del-cycle:active { background: #FBE3DC; }
+
   .progress-row { display: flex; align-items: center; gap: 8px; margin: 0 16px 12px; }
   .progress-track { flex: 1; height: 6px; background: #E1E8DE; border-radius: 999px; overflow: hidden; }
   .progress-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--amber)); border-radius: 999px; transition: width .2s ease; }
-  .progress-pct { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 10.5px; font-weight: 600; color: var(--muted); width: 32px; text-align: right; flex-shrink: 0; }
+  .progress-pct { font-size: 10.5px; font-weight: 600; color: var(--muted); width: 32px; text-align: right; flex-shrink: 0; }
   .perforation { height: 10px; border-top: 2px dashed var(--line); background-image: radial-gradient(circle, var(--paper) 2px, transparent 2.2px); background-size: 14px 100%; background-position: 7px center; }
+
+  /* ท้ายการ์ด: ล้างสถานะทั้งรอบ */
+  .cycle-foot { padding: 10px 16px 12px; display: flex; justify-content: flex-end; }
+  .btn-reset-cycle { background: #fff; border: 1.5px solid var(--line); color: var(--muted); border-radius: 8px; padding: 6px 10px; font-family: 'Kanit', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .btn-reset-cycle svg { width: 14px; height: 14px; }
+  .btn-reset-cycle:active { transform: scale(0.96); }
 
   table { width: 100%; border-collapse: collapse; }
   thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); background: var(--stripe); border-bottom: 2px solid var(--line-soft); padding: 8px 10px; text-align: left; }
@@ -97,11 +112,10 @@
   .status-icon { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
   .status-icon.off { color: var(--moss); }
   .status-icon.work { color: var(--red); }
-  .status-icon.unset { color: var(--amber); }
   .status-icon svg { width: 15px; height: 15px; }
   .status-pill-unset { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--amber); background: #FFF3E6; border: 1px solid #F3D3AE; border-radius: 999px; padding: 2px 8px; }
 
-  .actions { display: flex; gap: 6px; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
   .btn { border: 2px solid transparent; border-radius: 7px; padding: 6px 10px; font-family: 'Kanit', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: transform .1s ease; }
   .btn:active { transform: scale(0.95); }
   .btn-off { background: linear-gradient(90deg, var(--moss), var(--light)); color: #fff; }
@@ -112,6 +126,11 @@
   .btn.pending { opacity: 0.75; cursor: wait; }
   .spin { animation: spin 0.8s linear infinite; transform-origin: center; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .btn-del { background: #fff; border-color: var(--line); color: var(--red); padding: 6px 8px; }
+  .btn-del svg { width: 14px; height: 14px; }
+  .btn-reset { background: #fff; border-color: var(--line); padding: 6px 8px; }
+  .btn-reset svg { width: 14px; height: 14px; }
 
   .sync-icon { display: inline-flex; }
   .sync-icon svg { width: 15px; height: 15px; }
@@ -124,21 +143,13 @@
   .legend span { display: inline-flex; align-items: center; gap: 4px; }
   .legend svg { width: 13px; height: 13px; }
 
-  .setup-warning { display: none; background: #fff3f0; border: 2px solid var(--red); color: var(--red); border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; line-height: 1.6; }
-
-  .gen-hint { font-size: 10.5px; color: rgba(255,255,255,0.65); margin-top: 5px; line-height: 1.5; }
-
-  /* ── date cell คลิกได้ → เปิดปฏิทินรายเดือน ── */
+  /* ── date cell คลิกได้ → ปฏิทินรายเดือน ── */
   .date-cell.clickable { cursor: pointer; }
   .date-cell.clickable:active { opacity: 0.6; }
   .date-cell .cal-hint { display: inline-block; margin-left: 3px; opacity: 0.55; }
   .date-cell .cal-hint svg { width: 11px; height: 11px; vertical-align: -1px; }
 
-  /* ── ปุ่มลบราย SN ── */
-  .btn-del { background: #fff; border-color: var(--line); color: var(--red); padding: 6px 8px; }
-  .btn-del svg { width: 14px; height: 14px; }
-
-  /* ── MODAL (ใช้ร่วมกัน: confirm delete + calendar month view) ── */
+  /* ── MODAL ── */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(31,42,36,0.55); z-index: 100; align-items: flex-end; justify-content: center; padding: 0; }
   .modal-overlay.show { display: flex; }
   .modal-card { background: var(--paper); width: 100%; max-width: 480px; border-radius: 18px 18px 0 0; padding: 18px; max-height: 88vh; overflow-y: auto; box-shadow: 0 -8px 30px rgba(0,0,0,0.25); animation: modalUp .22s ease; }
@@ -152,8 +163,9 @@
   .modal-actions .btn { flex: 1; justify-content: center; padding: 10px; font-size: 13px; }
   .btn-danger { background: linear-gradient(90deg, var(--red), var(--amber)); color: #fff; }
   .btn-neutral { background: #fff; border-color: var(--line); color: var(--muted); }
+  .warn-box { background: #FFF3E6; border: 1.5px solid #F3D3AE; border-radius: 8px; padding: 8px 10px; margin-top: 8px; font-size: 12px; color: #8a5a1f; }
 
-  /* ── calendar grid ในโมดัล ── */
+  /* ── calendar grid ── */
   .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .cal-nav-btn { background: var(--stripe); border: none; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--moss); }
   .cal-nav-btn svg { width: 16px; height: 16px; }
@@ -179,7 +191,6 @@
   .cal-empty-note { font-size: 11.5px; color: var(--moss-pale); text-align: center; padding: 8px 0; }
   .cal-row-status { background: #fff; border: 1.5px solid var(--line-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 
-  /* ── เพิ่ม/ลบวันหยุดบริษัทเอง ── */
   .cal-add-btn { width: 100%; background: var(--stripe); border: 1.5px dashed var(--line); color: var(--moss); border-radius: 10px; padding: 8px; font-family: 'Kanit', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 10px; }
   .cal-add-btn svg { width: 14px; height: 14px; }
   .cal-add-form { background: #fff; border: 1.5px solid var(--line-soft); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
@@ -209,17 +220,13 @@
             <option value="12">+12 เดือน</option>
             <option value="24">+24 เดือน</option>
           </select>
-          <button id="genBtn" class="btn-generate" onclick="generateSaturdays()">
+          <button id="genBtn" class="btn-generate" onclick="requestGenerate()">
             <span id="genIcon"></span> เติมวันเสาร์
           </button>
         </div>
       </div>
-      <div class="gen-hint">* เติมวันเสาร์ล่วงหน้าต่อจากวันไกลสุดที่มีอยู่แล้ว (ไม่ลบของเดิม) — ถ้าเลือกจำนวนเดือนน้อยกว่าที่เติมไว้แล้ว จะไม่มีอะไรเพิ่มขึ้น ลบรายวันได้ที่ปุ่ม 🗑 ในตาราง</div>
+      <div class="gen-hint">* กดเติมวันเสาร์จะแสดงจำนวนก่อนยืนยันเสมอ · ลบรายวันได้ที่ 🗑 ในตาราง · ✕ หัวการ์ด = ลบวันเสาร์ทั้งรอบ · ล้างสถานะทั้งรอบอยู่ท้ายการ์ด</div>
     </div>
-  </div>
-
-  <div id="setupWarning" class="setup-warning">
-    ⚠️ ยังไม่ได้ตั้งค่า APPS_SCRIPT_URL ในไฟล์ index.html — เปิดไฟล์นี้แล้วแก้บรรทัดบนสุดของ &lt;script&gt; ให้เป็นลิงก์ Web App (/exec) ของ Apps Script ก่อนใช้งาน
   </div>
 
   <div id="overview" class="overview" style="display:none">
@@ -245,9 +252,6 @@
   <div id="toast"></div>
 
 <script>
-  // ★★★ แก้บรรทัดนี้เป็นลิงก์ Web App (/exec) ของ Apps Script ที่ deploy ไว้ ★★★
-  var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxL6gul8EhOa-seEtxnzPiA--teKvar6bBX7OoeJ8I4657qmRgtqCEApfKj12bdE9qo/exec";
-
   var ICON = {
     check: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>'; },
     cross: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9 9l6 6M15 9l-6 6"></path></svg>'; },
@@ -259,17 +263,16 @@
     target: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3"></circle></svg>'; },
     spinner: function (color) { return '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round"><path d="M12 3a9 9 0 019 9"></path></svg>'; },
     trash: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v13a1 1 0 01-1 1H8a1 1 0 01-1-1V7h10z"></path></svg>'; },
+    reset: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.7L3 8"></path><path d="M3 3v5h5"></path></svg>'; },
     calendar: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"></rect><path d="M8 3v4M16 3v4M3.5 10h17"></path></svg>'; },
     arrowL: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>'; },
     arrowR: function (color) { return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>'; }
   };
 
-  // ── วันหยุดบริษัท — ★ ตอนนี้ดึงจากชีท "CompanyHolidays" ผ่าน backend แล้ว
-  // (ไม่ hardcode ในหน้าเว็บอีกต่อไป) เพิ่ม/ลบเองได้จากปุ่ม "+ เพิ่มวันหยุด"
-  // ในปฏิทิน — ข้อมูลตั้งต้นปี 2026 ถูกเติมไว้แล้วผ่าน seedTJGHolidays2026()
-  // ใน Code.gs (จากเอกสาร TJG Working Calendar 2026) HOLIDAYS_MAP จะถูกเติม
-  // ค่าจริงตอนโหลดหน้าเว็บ (ดู loadHolidays())
-  var HOLIDAYS_MAP = {}; // dateISO -> { rowIndex, dateISO, label }
+  // ตรงกับ CUTOFF_DAY ฝั่ง server (Code.gs)
+  var CUTOFF_DAY_UI = 16;
+
+  var HOLIDAYS_MAP = {}; // dateISO -> { rowIndex, dateISO, label, syncStatus }
 
   document.querySelector('.legend').innerHTML =
     '<span>' + ICON.check('#2F5233') + ' หยุดแล้ว</span>' +
@@ -279,17 +282,21 @@
   document.getElementById('jumpIcon').innerHTML = ICON.target('#2F5233');
   document.querySelector('.close-x').innerHTML = ICON.x('#fff');
 
-  function loadHolidays() {
-    return callApi({ action: 'getHolidays' }).then(function (res) {
-      HOLIDAYS_MAP = {};
-      (res.holidays || []).forEach(function (h) { HOLIDAYS_MAP[h.dateISO] = h; });
-    }).catch(function () { /* โหลดวันหยุดไม่สำเร็จ ไม่ critical — ปฏิทินยังใช้งานได้ปกติแค่ไม่เห็นจุดวันหยุด */ });
-  }
-
   var currentData = null;
   var notifiedForCycle = null;
-  var expandedState = {};   // key -> true/false, กันไม่ให้ล้างการเปิด/ปิดตอน re-render
-  var pendingRows = {};     // rowIndex -> สถานะที่กำลังบันทึก (กันกดซ้ำ + โชว์ spinner)
+  var expandedState = {};   // key -> true/false
+  var pendingRows = {};     // rowIndex -> สถานะที่กำลังบันทึก
+  var pendingDelete = null; // { rowIndex, dateISO, snapshot, timerId } — ลบแบบ Undo ได้ 6 วินาที
+
+  function setHolidays_(list) {
+    HOLIDAYS_MAP = {};
+    (list || []).forEach(function (h) { HOLIDAYS_MAP[h.dateISO] = h; });
+  }
+  function loadHolidays() {
+    return callApi({ action: 'getHolidays' }).then(function (res) {
+      setHolidays_(res.holidays);
+    }).catch(function () { /* ไม่ critical — ปฏิทินยังใช้งานได้ */ });
+  }
 
   function showToast(msg, persist) {
     var t = document.getElementById('toast');
@@ -307,7 +314,6 @@
   function showError(err) {
     showToast(ICON.cross('#E08E4F') + '<span>เกิดข้อผิดพลาด: ' + (err && err.message ? err.message : err) + '</span>');
   }
-  // ── toast แบบมีปุ่ม "เลิกทำ" ค้างอยู่จนกว่าจะครบเวลา (ใช้กับลบวันเสาร์) ──
   function showUndoToast(msg, seconds) {
     var t = document.getElementById('toast');
     t.innerHTML = '<span>' + msg + '</span><button class="toast-undo-btn" onclick="undoDeleteRow()">เลิกทำ</button>';
@@ -316,17 +322,30 @@
     showToast._t = setTimeout(function () { t.style.display = 'none'; }, seconds * 1000);
   }
 
-  // เรียก Apps Script Web App เป็น JSON API ผ่าน fetch (GET + query string)
+  // ★ GitHub Pages: เรียก Apps Script Web App ผ่าน fetch (GET + query string)
+  var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxL6gul8EhOa-seEtxnzPiA--teKvar6bBX7OoeJ8I4657qmRgtqCEApfKj12bdE9qo/exec";
+
+  var CALLAPI_PARAM_KEYS = {
+    getData: [], updateStatus: ['rowIndex', 'status', 'dateISO'], generate: ['months', 'dryRun'],
+    deleteRow: ['rowIndex', 'dateISO'], deleteCycle: ['cycleKey'], clearCycle: ['cycleKey'],
+    getHolidays: [], addHoliday: ['date', 'label'], deleteHoliday: ['rowIndex', 'dateISO']
+  };
   function callApi(params) {
-    var qs = Object.keys(params).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
-    return fetch(APPS_SCRIPT_URL + '?' + qs).then(function (res) {
+    var qs = ['action=' + encodeURIComponent(params.action)];
+    (CALLAPI_PARAM_KEYS[params.action] || []).forEach(function (k) {
+      var v = params[k];
+      if (v === undefined || v === null) return;
+      if (typeof v === 'boolean') v = v ? '1' : '0'; // ★ server เช็ค dryRun === "1"
+      qs.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
+    });
+    return fetch(APPS_SCRIPT_URL + '?' + qs.join('&')).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     });
   }
 
   // ══════════════════════════════════════════
-  // MODAL SYSTEM (ใช้ร่วมกัน: ยืนยันลบ + ดูปฏิทินรายเดือน)
+  // MODAL SYSTEM
   // ══════════════════════════════════════════
   function openModal(html) {
     document.getElementById('modalCard').innerHTML = html;
@@ -336,36 +355,50 @@
     document.getElementById('modalOverlay').classList.remove('show');
   }
 
-  // ── ยืนยันก่อนลบวันเสาร์ (destructive action ต้องถามก่อนเสมอ) ──
-  function confirmDeleteRow(rowIndex, dateLabel, hasSync) {
-    var warn = hasSync ? '<div style="background:#FFF3E6;border:1.5px solid #F3D3AE;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px;color:#8a5a1f">⚠️ วันนี้เคยซิงค์ปฏิทินไว้แล้ว การลบจะลบ event ในปฏิทินออกด้วย</div>' : '';
+  // หน้าต่างยืนยันทั่วไป — tone 'ok' = ปุ่มยืนยันสีเขียว, ค่าอื่น = สีแดง
+  var _confirmCb = null;
+  function confirmAction_(title, bodyHtml, yesLabel, cb, tone) {
+    _confirmCb = cb;
+    var yesCls = tone === 'ok' ? 'btn btn-off' : 'btn btn-danger';
     openModal(
-      '<div class="modal-hd"><div class="modal-title">ลบวันเสาร์นี้?</div>' +
+      '<div class="modal-hd"><div class="modal-title">' + title + '</div>' +
       '<button class="modal-close" onclick="closeModal()">' + ICON.x('#5B6B5E') + '</button></div>' +
-      '<div class="modal-body">ต้องการลบแถววันเสาร์ที่ <b>' + dateLabel + '</b> ออกจากระบบใช่ไหม (มีเวลาเลิกทำได้ 6 วินาทีหลังกดลบ)' + warn + '</div>' +
+      '<div class="modal-body">' + bodyHtml + '</div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-neutral" onclick="closeModal()">ยกเลิก</button>' +
-      '<button class="btn btn-danger" id="confirmDelBtn" onclick="doDeleteRow(' + rowIndex + ')">' + ICON.trash('#fff') + ' ลบเลย</button>' +
+      '<button class="btn btn-neutral" onclick="closeModal()">ไม่ทำ</button>' +
+      '<button class="' + yesCls + '" onclick="runConfirm_()">' + yesLabel + '</button>' +
       '</div>'
     );
   }
-
-  // ★ ใหม่: ลบแบบมี Undo — เอาแถวออกจากหน้าจอทันที (optimistic) แต่ "ยังไม่ยิง
-  // ลบจริงที่ server" จนกว่าจะครบ 6 วินาที ถ้ากด "เลิกทำ" ทัน จะดึงแถวกลับมา
-  // เหมือนเดิมโดยไม่มีอะไรถูกลบจริงเลย (client-side เท่านั้น ไม่ต้องยุ่งกับ
-  // การ restore ฝั่ง server/ปฏิทินที่ซับซ้อนกว่ามาก)
-  var pendingDelete = null; // { rowIndex, snapshot, timerId }
-
-  function doDeleteRow(rowIndex) {
+  function runConfirm_() {
+    var cb = _confirmCb;
+    _confirmCb = null;
     closeModal();
-    if (pendingDelete) commitPendingDelete_(); // มีรายการรอลบค้างอยู่ก่อนแล้ว → ยืนยันอันเก่าทันที กันสับสน
+    if (cb) cb();
+  }
+
+  function setBtnBusy_(btn, busy, label) {
+    if (busy) {
+      btn.dataset.html = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = ICON.spinner('#fff') + ' ' + (label || 'กำลังทำงาน...');
+    } else {
+      btn.disabled = false;
+      if (btn.dataset.html) btn.innerHTML = btn.dataset.html;
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // ลบวันเสาร์ทีละวัน — ไม่มี modal ยืนยัน ใช้ Undo 6 วินาทีแทน
+  // ══════════════════════════════════════════
+  function doDeleteRow(rowIndex) {
+    if (pendingDelete) commitPendingDelete_();
 
     var found = findRow_(rowIndex);
-    if (!found) return;
+    if (!found || pendingRows[rowIndex]) return;
     var g = found.group, row = found.row;
-    var snapshot = JSON.parse(JSON.stringify(currentData));
-    var dateLabel = row.dateLabel;
 
+    var snapshot = JSON.parse(JSON.stringify(currentData));
     var idx = g.rows.indexOf(row);
     if (idx > -1) g.rows.splice(idx, 1);
     if (row.status === 'หยุด') g.offCount--;
@@ -374,21 +407,28 @@
 
     pendingDelete = {
       rowIndex: rowIndex,
+      dateISO: row.dateISO,
       snapshot: snapshot,
-      timerId: setTimeout(function () { commitPendingDelete_(); }, 6000)
+      timerId: setTimeout(commitPendingDelete_, 6000)
     };
-    showUndoToast('ลบวันเสาร์ ' + dateLabel + ' แล้ว', 6);
+    showUndoToast('ลบวันเสาร์ ' + row.dateLabel + ' แล้ว' + (row.syncStatus === 'DONE' ? ' (นัดในปฏิทินจะถูกลบด้วย)' : ''), 6);
+  }
+
+  function flushPendingDelete_() {
+    if (pendingDelete) commitPendingDelete_();
   }
 
   function commitPendingDelete_() {
     if (!pendingDelete) return;
-    var rowIndex = pendingDelete.rowIndex;
+    clearTimeout(pendingDelete.timerId); // ★ แก้บั๊ก: เดิมไม่ clear ทำให้ timer เก่ายิงซ้ำ
+    var p = pendingDelete;
     pendingDelete = null;
-    callApi({ action: 'deleteRow', rowIndex: rowIndex }).then(function (res) {
-      renderData(res); // sync กับผลจริงจาก server เสมอ (rowIndex ของแถวอื่นอาจเลื่อนหลังลบ)
+    callApi({ action: 'deleteRow', rowIndex: p.rowIndex, dateISO: p.dateISO }).then(function (res) {
+      // ถ้ามีการลบรอบถัดไปค้างอยู่ ปล่อยให้ UI ซิงค์ตอนนั้นแทน กันแถวที่กำลังลบกระพริบกลับ
+      if (!pendingDelete) applyServerResult_(res);
     }).catch(function (err) {
       showError(err);
-      showToast('การลบอาจไม่สำเร็จ กด "รีเฟรช" เพื่อเช็คสถานะล่าสุด');
+      refreshData_();
     });
   }
 
@@ -401,15 +441,103 @@
     showToast(ICON.check('#8FA893') + '<span>เลิกทำแล้ว — วันเสาร์นี้ยังอยู่ครบ</span>');
   }
 
+  function applyServerResult_(res) {
+    renderData(res);
+    if (res && res.stale) showToast(res.message);
+  }
+
+  function refreshData_() {
+    callApi({ action: 'getData' }).then(renderData).catch(showError);
+  }
+
   // ══════════════════════════════════════════
-  // CALENDAR MONTH VIEW — คลิกวันที่ในตาราง → เห็นทั้งเดือน พร้อมวันหยุดบริษัท TJG
+  // ★ ลบวันเสาร์ทั้งรอบ (ปุ่ม ✕ หัวการ์ด)
+  // ══════════════════════════════════════════
+  function deleteCycleAsk_(g) {
+    var total = g.rows.length;
+    var selected = g.rows.filter(function (r) { return r.status; }).length;
+    var synced = g.rows.filter(function (r) { return r.syncStatus === 'DONE'; }).length;
+    var body = 'ลบวันเสาร์ทั้ง <b>' + total + '</b> วันในรอบ <b>' + g.label + '</b> ออกจากชีท';
+    body += '<div style="color:var(--muted);font-size:12px;margin-top:4px">การลบนี้เลิกทำไม่ได้</div>';
+    if (selected) body += '<div class="warn-box">มี ' + selected + ' วันที่บันทึกสถานะไว้แล้ว</div>';
+    if (synced) body += '<div class="warn-box">⚠️ นัดในปฏิทิน ' + synced + ' วันจะถูกลบด้วย</div>';
+    confirmAction_('ลบวันเสาร์ทั้งรอบ?', body, ICON.trash('#fff') + ' ลบทั้งรอบ', function () { deleteCycleDo_(g.key); });
+  }
+
+  function deleteCycleDo_(key) {
+    flushPendingDelete_();
+    showToast(ICON.spinner('#fff') + '<span>กำลังลบรอบ...</span>', true);
+    callApi({ action: 'deleteCycle', cycleKey: key }).then(function (res) {
+      hideToast();
+      applyServerResult_(res);
+      if (!res.error) showToast(ICON.check('#8FA893') + '<span>ลบวันเสาร์ทั้งรอบแล้ว (' + res.deleted + ' วัน)</span>');
+    }).catch(function (err) {
+      hideToast();
+      showError(err);
+      refreshData_();
+    });
+  }
+
+  // ══════════════════════════════════════════
+  // ล้างสถานะทั้งรอบ (ย้ายมาอยู่ท้ายการ์ด)
+  // ══════════════════════════════════════════
+  function clearCycleAsk_(g) {
+    var n = g.rows.filter(function (r) { return r.status === 'หยุด' || r.status === 'ทำงาน'; }).length;
+    var body = 'ล้างการเลือกทั้งรอบ <b>' + g.label + '</b> ?<br>' + n + ' วันจะกลับเป็น "ยังไม่ระบุ" (แถววันเสาร์ยังอยู่ครบ)';
+    if (g.offCount > 0) {
+      body += '<div class="warn-box">⚠️ นัดหยุดในปฏิทิน ' + g.offCount + ' วันจะถูกลบ และสิทธิ์โควตาจะคืนให้ทั้งหมด</div>';
+    }
+    confirmAction_('ล้างสถานะทั้งรอบ?', body, 'ล้างทั้งรอบ', function () { clearCycleDo_(g.key); });
+  }
+
+  function clearCycleDo_(key) {
+    flushPendingDelete_();
+    var grp = currentData.groups.filter(function (x) { return x.key === key; })[0];
+    if (!grp) return;
+    var snapshot = JSON.parse(JSON.stringify(currentData));
+    grp.rows.forEach(function (r) { r.status = ''; pendingRows[r.rowIndex] = 'clear'; });
+    grp.offCount = 0;
+    grp.atCap = false;
+    if (notifiedForCycle === key) { notifiedForCycle = null; document.getElementById('notifyBanner').style.display = 'none'; }
+    renderData(currentData);
+    showToast(ICON.spinner('#fff') + '<span>กำลังล้างการเลือก...</span>', true);
+
+    callApi({ action: 'clearCycle', cycleKey: key }).then(function (res) {
+      grp.rows.forEach(function (r) { delete pendingRows[r.rowIndex]; });
+      hideToast();
+      if (res.error) {
+        currentData = snapshot;
+        renderData(currentData);
+        showToast(res.error);
+        return;
+      }
+      applyServerResult_(res);
+      showToast(ICON.check('#8FA893') + '<span>ล้างการเลือกทั้งรอบเรียบร้อย</span>');
+    }).catch(function (err) {
+      grp.rows.forEach(function (r) { delete pendingRows[r.rowIndex]; });
+      hideToast();
+      currentData = snapshot;
+      renderData(currentData);
+      showError(err);
+    });
+  }
+
+  // ══════════════════════════════════════════
+  // CALENDAR MONTH VIEW
   // ══════════════════════════════════════════
   var calState = { y: null, m: null, focusISO: null }; // m = 0-11
-  var calAddFormOpen = false; // สถานะเปิด/ปิดฟอร์ม "+ เพิ่มวันหยุด" คงอยู่ระหว่าง re-render จนกว่าจะปิด modal
+  var calAddFormOpen = false;
   var THAI_MONTHS_FULL = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
   var THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
   var WEEKDAY_TH = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
   function localISO_(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function cycleKeyOf_(d) {
+    var y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+    var s = day >= CUTOFF_DAY_UI ? new Date(y, m, CUTOFF_DAY_UI) : new Date(y, m - 1, CUTOFF_DAY_UI);
+    return localISO_(s);
+  }
+  function esc_(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function escAttr_(s) { return esc_(s).replace(/"/g, '&quot;'); }
 
   function openCalendarModal(iso) {
     var d = new Date(iso + 'T00:00:00');
@@ -426,7 +554,6 @@
     renderCalendarModal();
   }
 
-  // สร้าง map ของ SN วันเสาร์ที่ระบบติดตามอยู่ ทุกรอบรวมกัน คีย์ = dateISO
   function buildSatMap_() {
     var map = {};
     if (currentData && currentData.groups) {
@@ -441,7 +568,6 @@
     calAddFormOpen = !calAddFormOpen;
     renderCalendarModal();
     if (calAddFormOpen) {
-      // เติมวันที่เริ่มต้นเป็นวันที่ focus ถ้าอยู่เดือนเดียวกับที่กำลังดู ไม่งั้นใช้วันที่ 1 ของเดือนที่แสดง
       var d = document.getElementById('newHolidayDate');
       if (d) {
         var defISO = calState.focusISO && calState.focusISO.slice(0, 7) === (calState.y + '-' + ('0' + (calState.m + 1)).slice(-2))
@@ -457,17 +583,14 @@
     var labelVal = document.getElementById('newHolidayLabel').value.trim();
     if (!dateVal || !labelVal) { showToast('กรุณากรอกวันที่และชื่อวันหยุดให้ครบ'); return; }
     var btn = document.getElementById('addHolidaySubmitBtn');
-    btn.disabled = true;
-    btn.innerHTML = ICON.spinner('#fff') + ' กำลังบันทึก...';
+    setBtnBusy_(btn, true, 'กำลังบันทึก...');
     callApi({ action: 'addHoliday', date: dateVal, label: labelVal }).then(function (res) {
       if (res.error) {
         showToast(res.error);
-        btn.disabled = false;
-        btn.innerHTML = 'บันทึก';
+        setBtnBusy_(btn, false);
         return;
       }
-      HOLIDAYS_MAP = {};
-      (res.holidays || []).forEach(function (h) { HOLIDAYS_MAP[h.dateISO] = h; });
+      setHolidays_(res.holidays);
       calAddFormOpen = false;
       var d = new Date(dateVal + 'T00:00:00');
       calState.y = d.getFullYear();
@@ -476,20 +599,34 @@
       showToast(ICON.check('#8FA893') + '<span>เพิ่มวันหยุดเรียบร้อย</span>');
     }).catch(function (err) {
       showError(err);
-      btn.disabled = false;
-      btn.innerHTML = 'บันทึก';
+      setBtnBusy_(btn, false);
     });
   }
 
-  function deleteHolidayItem(rowIndex, label) {
-    // ★ ตอนนี้การลบจะลบ event/แจ้งเตือนใน Google Calendar ไปด้วย จึงยืนยันก่อนเสมอ
-    if (!confirm('ลบวันหยุด "' + label + '" ใช่ไหม? การแจ้งเตือนใน Google Calendar ของวันนี้จะถูกลบไปด้วย')) return;
-    callApi({ action: 'deleteHoliday', rowIndex: rowIndex }).then(function (res) {
-      HOLIDAYS_MAP = {};
-      (res.holidays || []).forEach(function (h) { HOLIDAYS_MAP[h.dateISO] = h; });
+  // ★ ลบวันหยุดบริษัท — ใช้ modal แทน confirm() ของเบราว์เซอร์
+  function askDeleteHoliday(rowIndex, dateISO, label) {
+    confirmAction_(
+      'ลบวันหยุดนี้?',
+      'ลบ <b>' + esc_(label) + '</b> ออกจากรายการ<br>การแจ้งเตือนใน Google Calendar ของวันนี้จะถูกลบไปด้วย',
+      ICON.trash('#fff') + ' ลบเลย',
+      function () { deleteHolidayDo_(rowIndex, dateISO); }
+    );
+  }
+
+  function deleteHolidayDo_(rowIndex, dateISO) {
+    callApi({ action: 'deleteHoliday', rowIndex: rowIndex, dateISO: dateISO }).then(function (res) {
+      if (res.error) {
+        showToast(res.error);
+        loadHolidays().then(renderCalendarModal);
+        return;
+      }
+      setHolidays_(res.holidays);
       renderCalendarModal();
       showToast(ICON.check('#8FA893') + '<span>ลบวันหยุดเรียบร้อย</span>');
-    }).catch(showError);
+    }).catch(function (err) {
+      showError(err);
+      loadHolidays().then(renderCalendarModal);
+    });
   }
 
   function renderCalendarModal() {
@@ -516,7 +653,7 @@
       if (holiday) cls += ' holiday';
       if (iso === calState.focusISO) cls += ' focus-ring';
 
-      grid += '<div class="' + cls + '" title="' + (holiday ? holiday.label : '') + '">' + day + '</div>';
+      grid += '<div class="' + cls + '" title="' + escAttr_(holiday ? holiday.label : '') + '">' + day + '</div>';
     }
     grid += '</div>';
 
@@ -555,9 +692,10 @@
           var syncIcon = h.syncStatus === 'DONE'
             ? '<span class="sync-icon sync-done" title="ซิงค์ Google Calendar แล้ว (เตือนล่วงหน้า 1 วัน)">' + ICON.check('#2F5233') + '</span>'
             : '<span class="sync-icon sync-pending" title="ยังไม่ซิงค์ปฏิทิน">' + ICON.clock('#8FA893') + '</span>';
+          // ใช้ data-attribute แทนการฝังชื่อใน onclick (ชื่อที่มี " หรือ ' จะไม่ทำให้ปุ่มพัง)
           return '<div class="cal-holiday-item"><span class="hd-date">' + h.day + ' ' + THAI_MONTHS[m] + '</span><span style="flex:1">' + esc_(h.name) + '</span>' +
             syncIcon +
-            '<button class="hd-del-btn" onclick="deleteHolidayItem(' + h.rowIndex + ',\'' + esc_(h.name).replace(/'/g, "\\'") + '\')" title="ลบวันหยุดนี้">' + ICON.trash('#C4482E') + '</button></div>';
+            '<button class="hd-del-btn" title="ลบวันหยุดนี้" data-row="' + h.rowIndex + '" data-iso="' + h.iso + '" data-label="' + escAttr_(h.name) + '">' + ICON.trash('#C4482E') + '</button></div>';
         }).join('') + '</div>';
     } else {
       holidayList = '<div class="cal-holiday-list"><div class="cal-empty-note">เดือนนี้ยังไม่มีวันหยุดบริษัทที่บันทึกไว้</div></div>';
@@ -575,7 +713,13 @@
       grid + legend + addToggleBtn + addForm + holidayList
     );
   }
-  function esc_(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  // event delegation สำหรับปุ่มลบวันหยุดในปฏิทิน (ผูกครั้งเดียวตอนโหลด)
+  document.getElementById('modalCard').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.hd-del-btn') : null;
+    if (!b) return;
+    askDeleteHoliday(parseInt(b.getAttribute('data-row'), 10), b.getAttribute('data-iso'), b.getAttribute('data-label'));
+  });
 
   function checkQuotaNotification(res) {
     if (!res.groups) return;
@@ -588,22 +732,18 @@
     document.getElementById('notifyBanner').style.display = 'flex';
   }
 
-  // ── สรุปภาพรวม: รวมจำนวนวันที่ "หยุด" ทั้งหมดในทุกรอบที่โหลดมา (quick win #6) ──
   function renderOverview(res) {
     var ov = document.getElementById('overview');
     if (!res.groups || res.groups.length === 0) { ov.style.display = 'none'; return; }
     var totalOff = res.groups.reduce(function (sum, g) { return sum + g.offCount; }, 0);
     var totalCap = res.groups.length * res.cap;
     document.getElementById('ovText').innerHTML =
-      'ใช้สิทธิ์หยุดเสาร์ไปแล้ว <b style="color:var(--moss)">' + totalOff + '</b> จาก ' + totalCap + ' วัน (' + res.groups.length + ' รอบที่มีข้อมูล)';
+      'ใช้สิทธิ์หยุดเสาร์ไปแล้ว <b>' + totalOff + '</b> จาก ' + totalCap + ' วัน (' + res.groups.length + ' รอบที่มีข้อมูล)';
     ov.style.display = 'flex';
   }
 
   // ══════════════════════════════════════════
-  // ตัวกรองการแสดงผล — คนละหน้าที่กับ dropdown "เติมวันเสาร์" ด้านบนโดยสิ้นเชิง
-  // dropdown นั้นแค่กำหนดว่า "จะสร้างข้อมูลเพิ่มไปอีกกี่เดือน" ตอนกดปุ่ม ไม่ได้
-  // เกี่ยวกับสิ่งที่แสดงผล — ตัวกรองนี้ต่างหากที่ควบคุมว่า "จะโชว์การ์ดรอบไหน
-  // บ้าง" โดยซ่อนการ์ดที่ไม่ตรงเงื่อนไขไปเลย (ไม่ใช่แค่พับเก็บแบบปุ่ม chevron)
+  // ตัวกรองการแสดงผล
   // ══════════════════════════════════════════
   var VIEW_FILTER_OPTIONS = [
     { key: 'current', label: 'รอบปัจจุบัน' },
@@ -611,7 +751,7 @@
     { key: '6m', label: '6 เดือน' },
     { key: 'all', label: 'ทั้งหมด' }
   ];
-  var viewFilter = 'all'; // ค่าเริ่มต้น: โชว์ทุกรอบเหมือนพฤติกรรมเดิม ไม่กระทบของเก่า
+  var viewFilter = 'all';
 
   function initViewFilterBar() {
     var bar = document.getElementById('viewFilterBar');
@@ -631,8 +771,6 @@
     updateViewFilterActive_();
     renderData(currentData);
   }
-  // เช็คว่ารอบ (cycle group) นี้ควรแสดงตามตัวกรองที่เลือกอยู่ไหม
-  // g.key คือวันที่เริ่มรอบ รูปแบบ "yyyy-MM-dd" (ตรงกับ start ของรอบจาก backend)
   function cycleWithinFilter_(g) {
     if (viewFilter === 'all') return true;
     if (viewFilter === 'current') return !!g.isCurrent;
@@ -640,10 +778,9 @@
     var cycleStart = new Date(g.key + 'T00:00:00');
     var today = new Date();
     var limit = new Date(today.getFullYear(), today.getMonth() + months, today.getDate());
-    return cycleStart <= limit; // รวมรอบปัจจุบัน (เริ่มไปแล้ว) + รอบอนาคตภายใน N เดือน
+    return cycleStart <= limit;
   }
 
-  // ── กระโดดไปรอบปัจจุบัน + เปิดการ์ดให้อัตโนมัติ (quick win #1) ──
   function jumpToCurrent() {
     if (!currentData || !currentData.groups) return;
     var cur = currentData.groups.find(function (g) { return g.isCurrent; });
@@ -657,40 +794,58 @@
   }
 
   function loadDataInitial() {
-    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
-      document.getElementById('setupWarning').style.display = 'block';
-      return;
-    }
-    // ★ FIX: เดิมยิง loadHolidays() คู่ขนานกับ getData() พร้อมกัน — พอทั้ง 2
-    // คำขอไปเปิด Google Sheet ตัวเดียวกันพร้อมกัน Apps Script จะเกิด lock
-    // ชนกัน ทำให้คำขอค้างนานผิดปกติจน timeout (เห็นเป็น 404 จาก
-    // googleusercontent หลัง 25+ วินาที) — เปลี่ยนเป็นยิงทีละคำขอเสมอ ไม่ว่า
-    // จะเป็น path ปกติหรือ path ชีทว่าง (ครั้งแรกที่ยังไม่มีข้อมูล) ก็ตาม
     callApi({ action: 'getData' }).then(function (res) {
       if (!res.error && (!res.groups || res.groups.length === 0)) {
-        generateSaturdays(null, loadHolidays); // เติมวันเสาร์ก่อน แล้วค่อยโหลดวันหยุดทีหลัง
+        generateSaturdays(null, loadHolidays);
       } else {
         renderData(res);
-        // ครั้งแรกที่โหลดหน้า ให้เลื่อนไปรอบปัจจุบันอัตโนมัติเลย ไม่ต้องรอผู้ใช้กด
         setTimeout(jumpToCurrent, 300);
         loadHolidays();
       }
     }).catch(showError);
   }
 
+  // ★ กดปุ่มเติมวันเสาร์: นับก่อน แล้วให้ยืนยันทุกครั้ง
+  function requestGenerate() {
+    var months = parseInt(document.getElementById('monthsSelect').value, 10);
+    var btn = document.getElementById('genBtn');
+    setBtnBusy_(btn, true, 'กำลังคำนวณ...');
+    callApi({ action: 'generate', months: months, dryRun: true }).then(function (res) {
+      setBtnBusy_(btn, false);
+      if (res.error) { showToast(res.error); return; }
+      if (!res.wouldAdd) {
+        showToast('มีวันเสาร์ครบอยู่แล้วในช่วงนี้ ลองเลือกจำนวนเดือนมากขึ้น');
+        return;
+      }
+      confirmAction_(
+        'เติมวันเสาร์?',
+        'จะเพิ่มวันเสาร์ <b>' + res.wouldAdd + ' วัน</b> (' + res.from + ' – ' + res.to + ')<br>' +
+        '<span style="color:var(--muted);font-size:12px">ลบทีละวันหรือทั้งรอบได้ภายหลัง</span>',
+        'เติมเลย',
+        function () { generateSaturdays(months); },
+        'ok'
+      );
+    }).catch(function (err) {
+      setBtnBusy_(btn, false);
+      showError(err);
+    });
+  }
+
   function generateSaturdays(monthsOverride, onDoneCallback) {
     var months = monthsOverride || parseInt(document.getElementById('monthsSelect').value, 10);
     var btn = document.getElementById('genBtn');
-    btn.disabled = true;
-    var origHtml = btn.innerHTML;
-    btn.innerHTML = ICON.spinner('#fff') + ' กำลังเติม...';
+    flushPendingDelete_();
+    setBtnBusy_(btn, true, 'กำลังเติม...');
     callApi({ action: 'generate', months: months }).then(function (res) {
-      btn.disabled = false;
-      btn.innerHTML = origHtml;
-      showToast(res.generated > 0 ? ('✅ เติมวันเสาร์ใหม่ ' + res.generated + ' วัน') : 'มีวันเสาร์ครบอยู่แล้วในช่วงนี้ ลองเลือกจำนวนเดือนมากขึ้น');
+      setBtnBusy_(btn, false);
+      if (res.error) { showToast(res.error); return; }
+      showToast(res.generated > 0 ? ('✅ เติมวันเสาร์ใหม่ ' + res.generated + ' วัน') : 'มีวันเสาร์ครบอยู่แล้วในช่วงนี้');
       renderData(res);
-      if (typeof onDoneCallback === 'function') onDoneCallback(); // เรียกทีหลัง generate เสร็จแล้วเท่านั้น กันยิงคู่ขนาน
-    }).catch(function (err) { btn.disabled = false; btn.innerHTML = origHtml; showError(err); });
+      if (typeof onDoneCallback === 'function') onDoneCallback();
+    }).catch(function (err) {
+      setBtnBusy_(btn, false);
+      showError(err);
+    });
   }
 
   function renderData(res) {
@@ -705,7 +860,7 @@
       return;
     }
     if (!res.groups || res.groups.length === 0) {
-      container.innerHTML = '<div class="empty-note">ยังไม่มีข้อมูลวันเสาร์ในชีท</div>';
+      container.innerHTML = '<div class="empty-note">ยังไม่มีข้อมูลวันเสาร์ในชีท — กด "เติมวันเสาร์" เพื่อเริ่มต้น</div>';
       document.getElementById('overview').style.display = 'none';
       document.getElementById('viewFilterBar').style.display = 'none';
       return;
@@ -714,6 +869,7 @@
     renderOverview(res);
     document.getElementById('viewFilterBar').style.display = 'flex';
 
+    var todayKey = cycleKeyOf_(new Date());
     var groupsToShow = res.groups.filter(cycleWithinFilter_);
     if (groupsToShow.length === 0) {
       container.innerHTML = '<div class="empty-note">ไม่มีรอบที่ตรงกับตัวกรองนี้ — ลองเลือก "ทั้งหมด"</div>';
@@ -722,8 +878,10 @@
 
     groupsToShow.forEach(function (g) {
       var pct = res.cap > 0 ? Math.min(100, Math.round((g.offCount / res.cap) * 100)) : 0;
-      if (!(g.key in expandedState)) expandedState[g.key] = !!g.isCurrent; // ค่าเริ่มต้น: เปิดเฉพาะรอบปัจจุบัน
+      if (!(g.key in expandedState)) expandedState[g.key] = !!g.isCurrent;
       var isOpen = expandedState[g.key];
+
+      var tag = g.isCurrent ? 'รอบปัจจุบัน' : (g.key < todayKey ? 'รอบที่ผ่านมา' : 'รอบถัดไป');
 
       var card = document.createElement('div');
       card.className = 'cycle-card' + (g.isCurrent ? ' current' : '');
@@ -734,11 +892,18 @@
       head.innerHTML =
         '<div class="cycle-head-left"><span class="chevron' + (isOpen ? ' open' : '') + '">' + ICON.chevron('#5B6B5E') + '</span>' +
         '<div><div class="cycle-label display">' + g.label + '</div>' +
-        '<div class="cycle-tag">' + (g.isCurrent ? 'รอบปัจจุบัน' : 'รอบอื่น') + '</div></div></div>' +
-        '<div class="badge ' + (g.atCap ? 'full' : 'ok') + '">' + (g.atCap ? ICON.cross('#fff') : ICON.check('#fff')) + ' ' + g.offCount + '/' + res.cap + '</div>';
+        '<div class="cycle-tag' + (g.isCurrent || g.key >= todayKey ? '' : ' past') + '">' + tag + '</div></div></div>' +
+        '<div class="head-right">' +
+        '<div class="badge ' + (g.atCap ? 'full' : 'ok') + '">' + (g.atCap ? ICON.cross('#fff') : ICON.check('#fff')) + ' ' + g.offCount + '/' + res.cap + '</div>' +
+        '<button class="btn-del-cycle" title="ลบวันเสาร์ทั้งรอบนี้" aria-label="ลบวันเสาร์ทั้งรอบนี้">' + ICON.x('#C4482E') + '</button>' +
+        '</div>';
       head.onclick = function () {
         expandedState[g.key] = !expandedState[g.key];
         renderData(currentData);
+      };
+      head.querySelector('.btn-del-cycle').onclick = function (e) {
+        e.stopPropagation();
+        deleteCycleAsk_(g);
       };
       card.appendChild(head);
 
@@ -771,7 +936,7 @@
           var tdStatus = document.createElement('td');
           if (row.status === 'หยุด') tdStatus.innerHTML = '<span class="status-icon off">' + ICON.check('#2F5233') + ' หยุด</span>';
           else if (row.status === 'ทำงาน') tdStatus.innerHTML = '<span class="status-icon work">' + ICON.cross('#C4482E') + ' ทำงาน</span>';
-          else tdStatus.innerHTML = '<span class="status-pill-unset">ยังไม่ระบุ</span>'; // quick win #5: เด่นกว่าขีดกลางเดิม
+          else tdStatus.innerHTML = '<span class="status-pill-unset">ยังไม่ระบุ</span>';
           tr.appendChild(tdStatus);
 
           var tdSync = document.createElement('td');
@@ -809,17 +974,28 @@
           }
           btnWork.onclick = function () { setStatus(row.rowIndex, 'ทำงาน'); };
 
-          // ★ ใหม่: ปุ่มลบราย SN (เอาไว้ลบวันเสาร์ที่เผลอเติมเกินความจำเป็น)
+          actions.appendChild(btnOff);
+          actions.appendChild(btnWork);
+
+          if (row.status === 'หยุด' || row.status === 'ทำงาน') {
+            var btnReset = document.createElement('button');
+            btnReset.className = 'btn btn-reset';
+            btnReset.title = 'ล้างการเลือก (กลับเป็นยังไม่ระบุ)';
+            btnReset.setAttribute('aria-label', 'ล้างการเลือกวันนี้');
+            btnReset.innerHTML = ICON.reset('#5B6B5E');
+            if (pendingHere) btnReset.disabled = true;
+            btnReset.onclick = function () { setStatus(row.rowIndex, ''); };
+            actions.appendChild(btnReset);
+          }
+
           var btnDel = document.createElement('button');
           btnDel.className = 'btn btn-del';
           btnDel.title = 'ลบวันเสาร์นี้';
           btnDel.innerHTML = ICON.trash('#C4482E');
           if (pendingHere) btnDel.disabled = true;
-          btnDel.onclick = function () { confirmDeleteRow(row.rowIndex, row.dateLabel, row.syncStatus === 'DONE'); };
-
-          actions.appendChild(btnOff);
-          actions.appendChild(btnWork);
+          btnDel.onclick = function () { doDeleteRow(row.rowIndex); };
           actions.appendChild(btnDel);
+
           tdAction.appendChild(actions);
           tr.appendChild(tdAction);
           tbody.appendChild(tr);
@@ -827,6 +1003,16 @@
 
         table.appendChild(tbody);
         body.appendChild(table);
+      }
+
+      // ท้ายการ์ด: ล้างสถานะทั้งรอบ — โชว์เฉพาะเมื่อมีการเลือกไว้อย่างน้อย 1 วัน
+      var hasAny = g.rows.some(function (r) { return r.status === 'หยุด' || r.status === 'ทำงาน'; });
+      if (hasAny) {
+        var foot = document.createElement('div');
+        foot.className = 'cycle-foot';
+        foot.innerHTML = '<button class="btn-reset-cycle">' + ICON.reset('#5B6B5E') + ' ล้างสถานะทั้งรอบ</button>';
+        foot.querySelector('button').onclick = function () { clearCycleAsk_(g); };
+        body.appendChild(foot);
       }
 
       var perf = document.createElement('div');
@@ -849,9 +1035,10 @@
     return null;
   }
 
+  // status = 'หยุด' | 'ทำงาน' | '' (ว่าง = ล้างการเลือก)
   function setStatus(rowIndex, status) {
     if (!currentData) return;
-    if (pendingRows[rowIndex]) return; // กำลังบันทึกแถวนี้อยู่แล้ว กันกดซ้ำ
+    if (pendingRows[rowIndex]) return;
     var found = findRow_(rowIndex);
     if (!found) return;
     var g = found.group, row = found.row;
@@ -862,6 +1049,26 @@
       return;
     }
 
+    // เปลี่ยนจาก "หยุด" เป็นอย่างอื่น = ลบนัดในปฏิทิน + คืนโควตา ต้องถามยืนยันก่อน
+    if (row.status === 'หยุด' && status !== 'หยุด') {
+      var action = status === '' ? 'ล้างการเลือก' : 'เปลี่ยนเป็นทำงาน';
+      confirmAction_(
+        'ยกเลิกวันหยุดนี้?',
+        'วันเสาร์ที่ <b>' + row.dateLabel + '</b> จะ' + action + '<br>นัดหยุดในปฏิทินจะถูกลบ และสิทธิ์โควตาจะคืนให้',
+        action,
+        function () { applyStatus_(rowIndex, status); }
+      );
+      return;
+    }
+    applyStatus_(rowIndex, status);
+  }
+
+  function applyStatus_(rowIndex, status) {
+    flushPendingDelete_();
+    var found = findRow_(rowIndex);
+    if (!found || pendingRows[rowIndex]) return;
+    var g = found.group, row = found.row;
+
     var snapshot = JSON.parse(JSON.stringify(currentData));
     var wasOff = row.status === 'หยุด';
     row.status = status;
@@ -869,21 +1076,22 @@
     if (status !== 'หยุด' && wasOff) g.offCount--;
     g.atCap = g.offCount >= currentData.cap;
 
-    pendingRows[rowIndex] = status;
+    pendingRows[rowIndex] = status === '' ? 'clear' : status;
     renderData(currentData);
     showToast(ICON.spinner('#fff') + '<span>กำลังบันทึก...</span>', true);
 
-    callApi({ action: 'updateStatus', rowIndex: rowIndex, status: status }).then(function (res) {
+    callApi({ action: 'updateStatus', rowIndex: rowIndex, status: status, dateISO: row.dateISO }).then(function (res) {
       delete pendingRows[rowIndex];
       hideToast();
       if (res.blocked) {
         currentData = snapshot;
         renderData(currentData);
         showToast(res.message);
-      } else {
-        renderData(res);
-        showToast(ICON.check('#8FA893') + '<span>บันทึกเรียบร้อย</span>');
+        return;
       }
+      renderData(res);
+      if (res.stale) { showToast(res.message); return; }
+      showToast(ICON.check('#8FA893') + '<span>' + (status === '' ? 'ล้างการเลือกเรียบร้อย' : 'บันทึกเรียบร้อย') + '</span>');
     }).catch(function (err) {
       delete pendingRows[rowIndex];
       hideToast();
@@ -898,7 +1106,7 @@
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js').catch(function () { /* ไม่มี SW ก็ยังใช้งานได้ปกติ แค่ไม่ใช่โหมดแอปเต็มรูปแบบ */ });
+      navigator.serviceWorker.register('sw.js').catch(function () { /* ไม่มี SW ก็ยังใช้งานได้ปกติ */ });
     });
   }
 </script>
